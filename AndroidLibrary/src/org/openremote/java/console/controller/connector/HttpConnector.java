@@ -38,12 +38,12 @@ import org.openremote.entities.panel.ResourceDataResponse;
 import org.openremote.entities.panel.ResourceLocator;
 import org.openremote.entities.panel.version1.Panel;
 import org.openremote.entities.util.JacksonProcessor;
-import org.openremote.entitites.controller.AsyncControllerCallback;
-import org.openremote.entitites.controller.ControllerError;
-import org.openremote.entitites.controller.ControllerResponseCode;
-import org.openremote.entitites.controller.PanelInfoList;
-import org.openremote.entitites.controller.SensorStatus;
-import org.openremote.entitites.controller.SensorStatusList;
+import org.openremote.entities.controller.AsyncControllerCallback;
+import org.openremote.entities.controller.ControllerError;
+import org.openremote.entities.controller.ControllerResponseCode;
+import org.openremote.entities.controller.PanelInfoList;
+import org.openremote.entities.controller.SensorStatus;
+import org.openremote.entities.controller.SensorStatusList;
 import org.openremote.java.console.controller.ControllerConnectionStatus;
 import org.openremote.java.console.controller.auth.Credentials;
 

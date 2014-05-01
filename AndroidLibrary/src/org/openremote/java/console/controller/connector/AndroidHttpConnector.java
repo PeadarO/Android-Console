@@ -21,7 +21,7 @@
 package org.openremote.java.console.controller.connector;
 
 import org.apache.http.Header;
-import org.openremote.entitites.controller.ControllerResponseCode;
+import org.openremote.entities.controller.ControllerResponseCode;
 
 import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.AsyncHttpResponseHandler;

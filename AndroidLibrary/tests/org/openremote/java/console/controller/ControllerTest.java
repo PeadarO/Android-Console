@@ -18,8 +18,8 @@ import org.openremote.entities.panel.version1.Panel;
 import org.openremote.entities.panel.version1.SliderWidget;
 import org.openremote.entities.panel.version1.SwitchWidget;
 import org.openremote.entities.panel.version1.Widget;
-import org.openremote.entitites.controller.AsyncControllerCallback;
-import org.openremote.entitites.controller.ControllerResponseCode;
+import org.openremote.entities.controller.AsyncControllerCallback;
+import org.openremote.entities.controller.ControllerResponseCode;
 
 // TODO: This needs a controller fixture that provides static answers
 public class ControllerTest {

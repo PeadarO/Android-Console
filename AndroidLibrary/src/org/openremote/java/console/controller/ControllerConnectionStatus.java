@@ -20,7 +20,7 @@
  */
 package org.openremote.java.console.controller;
 
-import org.openremote.entitites.controller.ControllerResponseCode;
+import org.openremote.entities.controller.ControllerResponseCode;
 
 /**
  * This connection object can be used in future to store additional information

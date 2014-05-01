@@ -35,7 +35,7 @@ import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClients;
-import org.openremote.entitites.controller.ControllerResponseCode;
+import org.openremote.entities.controller.ControllerResponseCode;
 import org.openremote.java.console.controller.Controller;
 
 /**
