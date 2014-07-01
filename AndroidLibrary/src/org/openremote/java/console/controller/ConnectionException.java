@@ -27,4 +27,12 @@ package org.openremote.java.console.controller;
  */
 public class ConnectionException extends Exception {
   private static final long serialVersionUID = 5206350896312447990L;
+  
+  ConnectionException(String message) {
+    super(message);
+  }
+
+  ConnectionException(Exception e) {
+    super(e);
+  }
 }

@@ -37,13 +37,8 @@ public class ControllerTest {
   
   @BeforeClass
   public static void connectController() {
-    try {
-      controller = new Controller(new URL("http://multimation.co.uk:8081/controller"));
-    } catch (Exception e) {
-      // Will get here if the URL is not valid
-      Assert.fail(e.getMessage());
-    }
-    
+    controller = new Controller("http://multimation.co.uk:8081/controller");
+
     controller.connect(new AsyncControllerCallback<ControllerConnectionStatus>() {
       
       @Override

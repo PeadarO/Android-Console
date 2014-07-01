@@ -32,6 +32,7 @@ import org.openremote.entities.panel.ResourceInfo;
 import org.openremote.entities.panel.ResourceLocator;
 import org.openremote.entities.panel.version1.Panel;
 import org.openremote.entities.controller.AsyncControllerCallback;
+import org.openremote.java.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.java.console.controller.ControllerConnectionStatus;
 import org.openremote.java.console.controller.auth.Credentials;
 
@@ -57,6 +58,12 @@ public interface ControllerConnector {
    * @return
    */
   URL getControllerUrl();
+  
+  /**
+   * Gets the unique controller identity
+   * @return
+   */
+  String getControllerIdentity();
 
   /**
    * Sets the {@link org.openremote.java.controller.auth.Credentials} to be used
@@ -210,4 +217,26 @@ public interface ControllerConnector {
    */
   void getResourceData(String resourceName,
           AsyncControllerCallback<ResourceDataResponse> resourceDataCallback, int timeout);
+  
+  /**
+   * Perform controller discovery for the specified period of time using the specified TCP port
+   * and call onDiscoveryStarted, if discovery cannot be started then call onStartDiscoveryFailed.
+   * When a new controller is discovered call onControllerFound.
+   * @param callback
+   * @param tcpPort
+   * @param searchDuration
+   */
+  void startDiscovery(AsyncControllerDiscoveryCallback callback, int tcpPort, Integer searchDuration);
+  
+  /**
+   * Stop current controller discovery and call onDiscoveryStopped of callback provided at startDiscovery
+   * @param callback
+   */
+  void stopDiscovery();
+  
+  /**
+   * Determines if controller discovery is currently running
+   * @return
+   */
+  boolean isDiscoveryRunning();
 }

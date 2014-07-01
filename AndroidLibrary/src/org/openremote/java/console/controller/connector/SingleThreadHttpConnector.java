@@ -35,8 +35,10 @@ import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClients;
+import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.ControllerResponseCode;
 import org.openremote.java.console.controller.Controller;
+import org.openremote.java.console.controller.auth.Credentials;
 
 /**
  * Test controller connector that does things synchronously for ease of testing
@@ -54,15 +56,6 @@ public class SingleThreadHttpConnector extends HttpConnector {
 
   @Override
   protected void doRequest(String url, final ControllerCallback callback, Integer timeout) {
-    if (callback.command == Command.LOGIN) {
-      creds.clear();
-      if (credentials != null) {
-        creds.setCredentials(new AuthScope("localhost", 8080), new UsernamePasswordCredentials(
-                credentials.getUsername(), credentials.getPassword()));
-      }
-      return;
-    }
-
     boolean doHead = false;
 
     if (callback.command == Command.GET_RESOURCE) {
@@ -122,5 +115,25 @@ public class SingleThreadHttpConnector extends HttpConnector {
       }
       callback.callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
     }
+  }
+
+  @Override
+  public void setCredentials(Credentials credentials) {
+    creds.clear();
+    if (credentials != null) {
+      creds.setCredentials(new AuthScope("localhost", 8080), new UsernamePasswordCredentials(
+              credentials.getUsername(), credentials.getPassword()));
+    }
+  }
+
+  @Override
+  public void logout(AsyncControllerCallback<Boolean> callback, int timeout) {
+    creds.clear();
+  }
+
+  @Override
+  public boolean isDiscoveryRunning() {
+    // TODO Auto-generated method stub
+    return false;
   }
 }

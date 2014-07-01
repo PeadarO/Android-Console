@@ -2,7 +2,6 @@ package org.openremote.android.console.demo;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.net.URL;
 import java.util.List;
 
 import org.openremote.entities.panel.PanelInfo;
@@ -16,9 +15,12 @@ import org.openremote.entities.panel.version1.SliderWidget;
 import org.openremote.entities.panel.version1.SwitchWidget;
 import org.openremote.entities.panel.version1.Widget;
 import org.openremote.entities.controller.AsyncControllerCallback;
+import org.openremote.entities.controller.ControllerInfo;
 import org.openremote.entities.controller.ControllerResponseCode;
+import org.openremote.java.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.java.console.controller.Controller;
 import org.openremote.java.console.controller.ControllerConnectionStatus;
+import org.openremote.java.console.controller.service.ControllerDiscoveryService;
 
 import android.os.Bundle;
 import android.app.Activity;
@@ -72,8 +74,8 @@ public class DemoActivity extends Activity {
       }
     };
     
-    // Initialise the controller
-    initController();
+    // Search for controllers
+    searchForControllers();
   }
 
   @Override
@@ -83,23 +85,60 @@ public class DemoActivity extends Activity {
     return true;
   }
 
+  private void searchForControllers() {
+    ControllerDiscoveryService.startDiscovery(new AsyncControllerDiscoveryCallback() {
+      
+      @Override
+      public void onStartDiscoveryFailed(ControllerResponseCode arg0) {
+        writeLine("Start Discovery Failed! " + arg0.getDescription());
+      }
+      
+      @Override
+      public void onDiscoveryStopped() {
+        writeLine("Discovery Finished!");
+
+        // Initialise the controller
+        initController();
+      }
+      
+      @Override
+      public void onDiscoveryStarted() {
+        writeLine("Start Discovery!");
+        
+        button.setOnTouchListener(new View.OnTouchListener() {
+          @Override
+          public boolean onTouch(View v, MotionEvent event) {
+            if(event.getAction() == MotionEvent.ACTION_DOWN) {
+              ControllerDiscoveryService.stopDiscovery();
+            } else if (event.getAction() == MotionEvent.ACTION_UP) {
+              // Do nothing here for switch
+            }
+            return true;
+          }
+        });
+      }
+      
+      @Override
+      public void onControllerFound(ControllerInfo controllerInfo) {
+        writeLine("Controller Found!");
+        writeLine("    " + controllerInfo.getUrl());
+      }
+    });
+  }
+  
   private void initController() {
-    try {
-      // Create controller instance using URL
-      controller = new Controller(new URL(CONTROLLER_URL));
-      
-      // Set load resource data to true (rather than lazy loading) if caching
-      // images then this should be false and then you can compare modified times
-      // before retrieving the resource data
-      controller.setLoadResourceData(true);
-      
-      // Connect to the controller and use specified callback
-      controller.connect(connectionCallback);
-      writeLine("Connecting...");
-    } catch (Exception e) {
-      // TODO: This exception should be handled as the controller is not usable
-      writeLine("Controller Error");
-    }
+    // Create controller instance using URL
+    controller = new Controller(CONTROLLER_URL);
+    
+    // Set load resource data to true (rather than lazy loading) if caching
+    // images then this should be false and then you can compare modified times
+    // before retrieving the resource data
+    controller.setLoadResourceData(true);
+
+    writeLine("Connecting...");
+    
+    // Connect to the controller and use specified callback
+    controller.connect(connectionCallback);
   }
   
   private void getPanelInfo() {

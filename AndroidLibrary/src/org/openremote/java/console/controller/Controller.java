@@ -20,6 +20,7 @@
  */
 package org.openremote.java.console.controller;
 
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,6 +38,7 @@ import org.openremote.entities.panel.ResourceLocator;
 import org.openremote.entities.panel.ResourceDataResponse;
 import org.openremote.entities.panel.version1.*;
 import org.openremote.entities.controller.AsyncControllerCallback;
+import org.openremote.entities.controller.ControllerInfo;
 import org.openremote.entities.controller.ControllerResponseCode;
 import org.openremote.java.console.controller.auth.Credentials;
 import org.openremote.java.console.controller.connector.*;
@@ -191,37 +193,17 @@ public class Controller {
   // TODO: Inject the appropriate connector
   private ControllerConnector connector = new AndroidHttpConnector();
   private String name;
-  private int version;
+  private String version;
   private boolean loadResourceData;
   private AsyncControllerCallback<ControllerConnectionStatus> connectCallback;
-
-  /**
-   * Create a controller from the specified {@link org.openremote.java.console.controller.ControllerInfo}
-   * @param controllerInfo
-   * @throws ConnectionException
-   */
-  public Controller(ControllerInfo controllerInfo) throws ConnectionException {
-    this(controllerInfo, null);
-  }
-
-  /**
-   * Create a controller from the specified {@link org.openremote.java.console.controller.ControllerInfo}
-   * using the specified {@link org.openremote.java.console.controller.auth.Credentials} for the connection
-   * @param controllerInfo
-   * @param credentials
-   * @throws ConnectionException
-   */
-  public Controller(ControllerInfo controllerInfo, Credentials credentials)
-          throws ConnectionException {
-    this(controllerInfo != null ? controllerInfo.getUrl() : null, credentials);
-  }
+  private ControllerInfo controllerInfo;
 
   /**
    * Create a controller from the specified string URL
    * @param url
    * @throws ConnectionException
    */
-  public Controller(URL url) throws ConnectionException {
+  public Controller(String url) {
     this(url, null);
   }
 
@@ -230,10 +212,29 @@ public class Controller {
    * {@link org.openremote.java.console.controller.auth.Credentials} for the connection
    * @param url
    * @param credentials
+   */
+  public Controller(String url, Credentials credentials) {
+    this(new ControllerInfo(url), credentials);
+  }
+
+  /**
+   * Create a controller from the specified {@link org.openremote.java.console.controller.ControllerInfo}
+   * @param controllerInfo
    * @throws ConnectionException
    */
-  public Controller(URL url, Credentials credentials) throws ConnectionException {
-    setControllerUrl(url);
+  public Controller(ControllerInfo controllerInfo) {
+    this(controllerInfo, null);
+  }
+  
+  /**
+   * Create a controller from the specified {@link org.openremote.java.console.controller.ControllerInfo}
+   * using the specified {@link org.openremote.java.console.controller.auth.Credentials} for the connection
+   * @param controllerInfo
+   * @param credentials
+   * @throws ConnectionException
+   */
+  public Controller(ControllerInfo controllerInfo, Credentials credentials) {
+    setControllerInfo(controllerInfo);
     setCredentials(credentials);
   }
 
@@ -276,7 +277,7 @@ public class Controller {
    * @return
    */
   public ControllerInfo getControllerInfo() {
-    return new ControllerInfo(name, version, connector.getControllerUrl());
+    return new ControllerInfo(connector.getControllerUrl().toString(), name, version, connector.getControllerIdentity());
   }
 
   /**
@@ -431,18 +432,15 @@ public class Controller {
   // ------------------------------------------------------------------------------
 
   /**
-   * Set the URL of the controller; will cause a disconnect and re-connect if controller
+   * Set the Controller Info; will cause a disconnect and re-connect if controller
    * is already connected. Previous connection callback will be called on connection complete
    * @param url
    */
-  public void setControllerUrl(URL url) {
-    URL currentUrl = connector.getControllerUrl();
-    if (currentUrl != null && currentUrl.equals(url)) {
-      return;
-    }
+  public void setControllerInfo(ControllerInfo controllerInfo) {
     boolean isConnected = isConnected();
     disconnect();
-    connector.setControllerUrl(url);
+    this.controllerInfo = controllerInfo;
+
     if (isConnected && connectCallback != null) {
       connect(connectCallback);
     }
@@ -470,6 +468,19 @@ public class Controller {
     }
     
     connectCallback = callback;
+    
+    // Set connector URL
+    if (controllerInfo == null || controllerInfo.getUrl() == null || controllerInfo.getUrl().isEmpty()) {
+      callback.onFailure(ControllerResponseCode.INVALID_URL);
+      return;
+    }
+    
+    try {
+      connector.setControllerUrl(new URL(controllerInfo.getUrl()));
+    } catch (MalformedURLException e) {
+      callback.onFailure(ControllerResponseCode.INVALID_URL);
+      return;
+    }
     
     connector.connect(new AsyncControllerCallback<ControllerConnectionStatus>() {
 

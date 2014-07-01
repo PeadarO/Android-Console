@@ -40,12 +40,17 @@ import org.openremote.entities.panel.version1.Panel;
 import org.openremote.entities.util.JacksonProcessor;
 import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.ControllerError;
+import org.openremote.entities.controller.ControllerInfo;
 import org.openremote.entities.controller.ControllerResponseCode;
 import org.openremote.entities.controller.PanelInfoList;
 import org.openremote.entities.controller.SensorStatus;
 import org.openremote.entities.controller.SensorStatusList;
+import org.openremote.java.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.java.console.controller.ControllerConnectionStatus;
 import org.openremote.java.console.controller.auth.Credentials;
+
+import com.loopj.android.http.AsyncHttpResponseHandler;
+import com.loopj.android.http.ResponseHandlerInterface;
 
 /**
  * Base class for HTTP connector implementations
@@ -64,7 +69,9 @@ abstract class HttpConnector implements ControllerConnector {
     LOGOUT(""),
     CONNECT("rest/servers"),
     GET_RESOURCE(""),
-    GET_RESOURCE_DATA("");
+    GET_RESOURCE_DATA(""),
+    DISCOVERY(""),
+    STOP_DISCOVERY("");
 
     private String url;
 
@@ -90,12 +97,11 @@ abstract class HttpConnector implements ControllerConnector {
   public URL getControllerUrl() {
     return controllerUrl;
   }
-
+  
   @Override
-  public void setCredentials(Credentials credentials) {
-    this.credentials = credentials;
-    // Handle as a command
-    doRequest(buildRequestUrl(Command.LOGIN), new ControllerCallback(Command.LOGIN, null), 3000);
+  public String getControllerIdentity() {
+    // TODO: Implement controller identity population
+    return "";
   }
 
   @Override
@@ -171,16 +177,6 @@ abstract class HttpConnector implements ControllerConnector {
   }
 
   @Override
-  public void logout(AsyncControllerCallback<Boolean> callback, int timeout) {
-    // Check URL is valid
-    credentials = null;
-    if (controllerUrl != null) {
-      doRequest(buildRequestUrl(Command.LOGOUT), new ControllerCallback(Command.LOGOUT, callback),
-              timeout);
-    }
-  }
-
-  @Override
   public void sendCommand(PanelCommand command,
           AsyncControllerCallback<PanelCommandResponse> callback, int timeout) {
     // Check URL is valid
@@ -216,6 +212,16 @@ abstract class HttpConnector implements ControllerConnector {
       doRequest(buildRequestUrl(new String[] { resourceName }, Command.GET_RESOURCE_DATA),
               new ControllerCallback(Command.GET_RESOURCE_DATA, callback, resourceName), timeout);
     }
+  }  
+
+  @Override
+  public void startDiscovery(AsyncControllerDiscoveryCallback callback, int tcpPort, Integer searchDuration) {
+    doRequest(null, new ControllerCallback(Command.DISCOVERY, callback, tcpPort), searchDuration);
+  }
+
+  @Override
+  public void stopDiscovery() {
+    doRequest(null, new ControllerCallback(Command.STOP_DISCOVERY, null), 0);
   }
 
   // ---------------------------------------------------------------------
@@ -254,6 +260,7 @@ abstract class HttpConnector implements ControllerConnector {
 
     switch (command) {
     case CONNECT:
+    {
       if (responseCode != 200) {
         processError(callback, responseData);
         return;
@@ -263,7 +270,9 @@ abstract class HttpConnector implements ControllerConnector {
       connected = true;
       c.onSuccess(new ControllerConnectionStatus(ControllerResponseCode.OK));
       break;
+    }
     case GET_PANEL_LIST:
+    {
       if (responseCode != 200) {
         processError(callback, responseData);
         return;
@@ -279,7 +288,9 @@ abstract class HttpConnector implements ControllerConnector {
         processError(callback, responseData);
       }
       break;
+    }
     case GET_PANEL_LAYOUT:
+    {
       if (responseCode != 200) {
         processError(callback, responseData);
         return;
@@ -293,7 +304,9 @@ abstract class HttpConnector implements ControllerConnector {
         processError(callback, responseData);
       }
       break;
+    }
     case SEND_COMMAND:
+    {
       if (responseCode != 200) {
         processError(callback, responseData);
         return;
@@ -307,7 +320,9 @@ abstract class HttpConnector implements ControllerConnector {
       successCallback.onSuccess(new PanelCommandResponse(sendCommand.getSenderId(),
               ControllerResponseCode.OK));
       break;
+    }
     case DO_SENSOR_POLLING:
+    {
       if (responseCode != 200 && responseCode != 504) {
         processError(callback, responseData);
         return;
@@ -326,7 +341,9 @@ abstract class HttpConnector implements ControllerConnector {
         }
       }
       break;
+    }
     case GET_SENSOR_STATUS:
+    {
       if (responseCode != 200) {
         processError(callback, responseData);
         return;
@@ -341,7 +358,9 @@ abstract class HttpConnector implements ControllerConnector {
         processError(callback, responseData);
       }
       break;
+    }
     case LOGOUT:
+    {
       AsyncControllerCallback<Boolean> logoutCallback = (AsyncControllerCallback<Boolean>) callback;
       if (responseCode == 200 || responseCode == 401) {
         logoutCallback.onSuccess(true);
@@ -349,7 +368,9 @@ abstract class HttpConnector implements ControllerConnector {
         processError(callback, responseData);
       }
       break;
+    }
     case GET_RESOURCE:
+    {
       if (responseCode != 200) {
         processError(callback, responseData);
         return;
@@ -388,7 +409,9 @@ abstract class HttpConnector implements ControllerConnector {
       resourceCallback.onSuccess(new ResourceInfo((ResourceLocator) objs[0], (String) objs[1],
               modifiedTime, contentType, contentData));
       break;
+    }
     case GET_RESOURCE_DATA:
+    {
       if (responseCode != 200) {
         processError(callback, responseData);
         return;
@@ -402,6 +425,26 @@ abstract class HttpConnector implements ControllerConnector {
       resourceDataCallback.onSuccess(new ResourceDataResponse((String) data, responseData,
               ControllerResponseCode.OK));
       break;
+    }
+    case DISCOVERY:
+    {
+      AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback)callback; 
+      try {
+        String responseStr = new String(responseData, "UTF-8");
+        ControllerInfo controllerInfo = null;
+        
+        if (responseStr.indexOf("{") == 0) {
+          controllerInfo = JacksonProcessor.unMarshall(responseStr, ControllerInfo.class);
+        } else {
+          // Assume v1 protocol where just the url is returned
+          controllerInfo = new ControllerInfo(responseStr);
+        }
+        discoveryCallback.onControllerFound(controllerInfo);
+      } catch (Exception e) {
+        processError(callback, responseData);
+      }
+      break;
+    }
     default:
       processError(callback, responseData);
     }

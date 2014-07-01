@@ -8,7 +8,7 @@
 	<classpathentry kind="lib" path="lib/httpclient/httpcore-4.3.jar"/>
 	<classpathentry kind="lib" path="lib/loopj/android-async-http-1.4.4.jar"/>
 	<classpathentry kind="lib" path="lib/junit/junit-4.8.jar"/>
-	<classpathentry kind="lib" path="lib/openremote/orentities-1.0.0.jar"/>
 	<classpathentry kind="lib" path="lib/apache/commons-logging-1.1.jar"/>
+	<classpathentry kind="lib" path="lib/openremote/orentities-1.1.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

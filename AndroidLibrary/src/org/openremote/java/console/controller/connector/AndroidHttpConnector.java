@@ -21,9 +21,13 @@
 package org.openremote.java.console.controller.connector;
 
 import org.apache.http.Header;
+import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.ControllerResponseCode;
+import org.openremote.java.console.controller.AsyncControllerDiscoveryCallback;
+import org.openremote.java.console.controller.auth.Credentials;
+import org.openremote.java.console.controller.connector.HttpConnector.Command;
+import org.openremote.java.console.controller.connector.HttpConnector.ControllerCallback;
 
-import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.ResponseHandlerInterface;
 
@@ -34,7 +38,7 @@ import com.loopj.android.http.ResponseHandlerInterface;
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  */
 public class AndroidHttpConnector extends HttpConnector {
-  private final AsyncHttpClient client = new AsyncHttpClient();
+  private final CustomAsyncHttpClient client = new CustomAsyncHttpClient();
 
   public AndroidHttpConnector() {
     client.addHeader("Accept", "application/json");
@@ -42,11 +46,46 @@ public class AndroidHttpConnector extends HttpConnector {
 
   @Override
   protected void doRequest(String url, final ControllerCallback callback, Integer timeout) {
-    if (callback.command == Command.LOGIN) {
-      client.clearBasicAuth();
-      if (credentials != null) {
-        client.setBasicAuth(credentials.getUsername(), credentials.getPassword());
-      }
+    if (callback.command == Command.DISCOVERY) {
+      ResponseHandlerInterface handler = new AsyncHttpResponseHandler() {
+        @Override
+        public void onStart() {
+          // Called when discovery is started
+          AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback)callback.callback; 
+          
+          discoveryCallback.onDiscoveryStarted();
+        }
+        
+        @Override
+        public void onFinish() {
+          // This will be called when discovery is stopped
+          AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback)callback.callback; 
+          
+          discoveryCallback.onDiscoveryStopped();
+        }
+        
+        @Override
+        public void onFailure(int code, Throwable exception, String message) {
+          // Called when discovery cannot be started
+          AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback)callback.callback; 
+          
+          discoveryCallback.onStartDiscoveryFailed(ControllerResponseCode.UNKNOWN_ERROR);
+        }
+        
+        @Override
+        public void onSuccess(int code, Header[] headers, byte[] response) {
+          // Called each time a controller is discovered
+          handleResponse(callback, code, headers, response);
+        }
+      };
+      
+      int tcpPort = (Integer) callback.data;
+      client.startDiscovery(tcpPort, timeout, handler);
+      return;
+    }
+    
+    if (callback.command == Command.STOP_DISCOVERY) {
+      client.stopDiscovery();
       return;
     }
 
@@ -78,11 +117,40 @@ public class AndroidHttpConnector extends HttpConnector {
         callback.callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
       }
     };
-
+    
     if (doHead) {
       client.head(url, handler);
     } else {
       client.get(url, handler);
     }
+  }
+  
+  @Override
+  public void setCredentials(Credentials credentials) {
+    this.credentials = credentials;
+    
+    client.clearBasicAuth();
+
+    if (credentials != null) {
+      client.setBasicAuth(credentials.getUsername(), credentials.getPassword());
+    }
+  }
+  
+  @Override
+  public void logout(AsyncControllerCallback<Boolean> callback, int timeout) {
+    credentials = null;
+    
+    if (controllerUrl != null) {
+      doRequest(buildRequestUrl(Command.LOGOUT), new ControllerCallback(Command.LOGOUT, callback),
+              timeout);
+    }
+    else {
+      callback.onSuccess(true);
+    }      
+  }
+
+  @Override
+  public boolean isDiscoveryRunning() {
+    return client.isDiscoveryRunning();
   }
 }

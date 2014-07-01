@@ -40,7 +40,7 @@ Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 	
 	<path id="project.class.path">
 		<pathelement location="${build.dir}"/>
-		<pathelement location="${lib.dir}/openremote/orentities-1.0.0.jar"/>
+		<pathelement location="${lib.dir}/openremote/orentities-1.1.0.jar"/>
         <pathelement location="${lib.dir}/httpclient/httpclient-4.3.jar"/>
         <pathelement location="${lib.dir}/httpclient/httpcore-4.3.jar"/>
         <pathelement location="${lib.dir}/apache/commons-logging-1.1.jar"/>
