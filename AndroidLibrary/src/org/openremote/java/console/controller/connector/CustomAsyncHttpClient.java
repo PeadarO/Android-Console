@@ -43,7 +43,7 @@ import com.loopj.android.http.ResponseHandlerInterface;
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  *
  */
-public class CustomAsyncHttpClient extends AsyncHttpClient {
+class CustomAsyncHttpClient extends AsyncHttpClient {
   private ExecutorService threadPool;
   private ControllerDiscoveryServer discoveryServer;
   

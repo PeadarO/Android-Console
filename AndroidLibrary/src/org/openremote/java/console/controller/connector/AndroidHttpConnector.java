@@ -25,8 +25,6 @@ import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.ControllerResponseCode;
 import org.openremote.java.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.java.console.controller.auth.Credentials;
-import org.openremote.java.console.controller.connector.HttpConnector.Command;
-import org.openremote.java.console.controller.connector.HttpConnector.ControllerCallback;
 
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.ResponseHandlerInterface;

@@ -86,6 +86,7 @@ public class DemoActivity extends Activity {
   }
 
   private void searchForControllers() {
+    // Start controller discovery
     ControllerDiscoveryService.startDiscovery(new AsyncControllerDiscoveryCallback() {
       
       @Override
@@ -105,11 +106,14 @@ public class DemoActivity extends Activity {
       public void onDiscoveryStarted() {
         writeLine("Start Discovery!");
         
+        button.setText("STOP DISCOVERY");
+        
         button.setOnTouchListener(new View.OnTouchListener() {
           @Override
           public boolean onTouch(View v, MotionEvent event) {
             if(event.getAction() == MotionEvent.ACTION_DOWN) {
               ControllerDiscoveryService.stopDiscovery();
+              button.setText("SWITCH");
             } else if (event.getAction() == MotionEvent.ACTION_UP) {
               // Do nothing here for switch
             }
@@ -121,7 +125,10 @@ public class DemoActivity extends Activity {
       @Override
       public void onControllerFound(ControllerInfo controllerInfo) {
         writeLine("Controller Found!");
-        writeLine("    " + controllerInfo.getUrl());
+        writeLine("    URL: " + controllerInfo.getUrl());
+        writeLine("    NAME: " + controllerInfo.getName());
+        writeLine("    VERSION: " + controllerInfo.getVersion());
+        writeLine("    IDENTITY: " + controllerInfo.getIdentity());
       }
     });
   }

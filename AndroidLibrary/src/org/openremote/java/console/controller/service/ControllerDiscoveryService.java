@@ -39,18 +39,52 @@ public class ControllerDiscoveryService {
     
   }
 
+  /**
+   * Start Controller Discovery and use the specified callback for reporting progress.
+   * Discovery will continue until {@link org.openremote.java.console.controller.service.stopDiscovery} is called.
+   * @param callback
+   */
   public static void startDiscovery(AsyncControllerDiscoveryCallback callback) {
     startDiscovery(callback, DEFAULT_TCP_PORT, null);
   }
   
-  public static void startDiscovery(AsyncControllerDiscoveryCallback callback, int tcpPort, Integer searchDuration) {
+  /**
+   * Start Controller Discovery and use the specified callback for reporting progress.
+   * Discovery will run for the specified number of milliseconds
+   * @param callback
+   * @param searchDuration
+   */
+  public static void startDiscovery(AsyncControllerDiscoveryCallback callback, int searchDuration) {
+    startDiscovery(callback, DEFAULT_TCP_PORT, new Integer(searchDuration));
+  }
+  
+  /**
+   * Start Controller Discovery and use the specified callback for reporting progress.
+   * Discovery will run for the specified number of milliseconds on the specified TCP port.
+   * @param callback
+   * @param searchDuration
+   */
+  public static void startDiscovery(AsyncControllerDiscoveryCallback callback, int searchDuration, int tcpPort) {
+    startDiscovery(callback, tcpPort, new Integer(searchDuration));
+  }
+  
+  private static void startDiscovery(AsyncControllerDiscoveryCallback callback, int tcpPort, Integer searchDuration) {
     connector.startDiscovery(callback, tcpPort, searchDuration);
   }
   
+  /**
+   * Stop the currently running discovery service.
+   * The {@link org.openremote.java.console.controller.AsyncControllerDiscoveryCallback.onDiscoveryStopped} method
+   * of the callback supplied when discovery started will be called.
+   */
   public static void stopDiscovery() {
     connector.stopDiscovery();
   }
   
+  /**
+   * Check if discovery is currently running.
+   * @return
+   */
   public static boolean isDiscoveryRunning() {
     return connector.isDiscoveryRunning();
   }

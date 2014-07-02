@@ -19,20 +19,11 @@
 */
 package org.openremote.java.console.controller.connector;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.BindException;
-import java.net.InetSocketAddress;
+import java.io.UnsupportedEncodingException;
 import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Future;
-
-import org.openremote.java.console.controller.service.ControllerDiscoveryService;
 
 import com.loopj.android.http.ResponseHandlerInterface;
 
@@ -57,12 +48,7 @@ class ControllerDiscoveryReceiver extends Thread {
     // Start TCP server and wait for incoming connections
     try {
       while (!cancelled) {
-        Socket socket = serverSocket.accept();
-        String address = ((InetSocketAddress)socket.getRemoteSocketAddress()).getAddress().getHostAddress();
-        if (!responses.contains(address)) {
-          responses.add(address);
-          new ControllerDiscoveryResponseHandler(responseHandler, socket).start();
-        }
+        new ControllerDiscoveryResponseHandler(this, serverSocket.accept()).start();
       }
     } catch (Exception e) {
     }
@@ -71,5 +57,18 @@ class ControllerDiscoveryReceiver extends Thread {
   void cancel() {
     cancelled = true;
     this.interrupt();
+  }
+  
+  synchronized void processResponse(String response) {
+    // Check response isn't empty or hasn't already been received
+    if (!response.isEmpty() && !responses.contains(response)) {
+      responses.add(response);
+      try {
+        responseHandler.sendSuccessMessage(200, null, response.getBytes("UTF-8"));
+      } catch (UnsupportedEncodingException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
   }
 }

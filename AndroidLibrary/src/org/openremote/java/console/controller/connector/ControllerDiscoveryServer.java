@@ -26,6 +26,11 @@ import java.net.InetAddress;
 
 import com.loopj.android.http.ResponseHandlerInterface;
 
+/**
+ * This class is the main manager of the discovery process.
+ * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
+ *
+ */
 class ControllerDiscoveryServer extends Thread {
   private final ResponseHandlerInterface responseHandler;
   private static final String MULTICAST_ADDRESS = "224.0.1.100";
@@ -34,6 +39,7 @@ class ControllerDiscoveryServer extends Thread {
   private int tcpPort;
   private int elapsedTime;
   private Integer duration;
+  private int pauseTime = 1000;
   private ControllerDiscoveryReceiver receiver;
   
   ControllerDiscoveryServer(int tcpPort, Integer duration, ResponseHandlerInterface responseHandler) {
@@ -60,13 +66,18 @@ class ControllerDiscoveryServer extends Thread {
     
     // Start the multicast   
     while(!cancelled) {
-      try {        
-        DatagramSocket socket = new DatagramSocket();
-        byte[] b = new byte[512];
-        DatagramPacket dgram;
-        dgram = new DatagramPacket(b, b.length, InetAddress.getByName(MULTICAST_ADDRESS), MULTICAST_PORT);
-        socket.send(dgram);
-      } catch (Exception e) {
+      if (elapsedTime % pauseTime == 0) {
+        try {        
+          DatagramSocket socket = new DatagramSocket();
+          byte[] b = new byte[512];
+          DatagramPacket dgram;
+          dgram = new DatagramPacket(b, b.length, InetAddress.getByName(MULTICAST_ADDRESS), MULTICAST_PORT);
+          socket.send(dgram);
+        } catch (Exception e) {
+        }
+        if (pauseTime < 60000) {
+          pauseTime *= 2;
+        }
       }
       
       elapsedTime += 1000;

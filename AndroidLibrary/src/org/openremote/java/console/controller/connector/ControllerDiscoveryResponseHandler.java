@@ -24,22 +24,19 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 
-import com.loopj.android.http.ResponseHandlerInterface;
-
 /**
- * Controller auto discovery; this is a Multicast UDP client broadcasting request to Controllers asking
- * for their credentials.
+ * Controller auto discovery response handler
  * 
  * @authors Rich Turner
  * 
  */
-public class ControllerDiscoveryResponseHandler extends Thread {
+class ControllerDiscoveryResponseHandler extends Thread {
   private Socket socket = null;
-  private ResponseHandlerInterface responseHandler;
+  private ControllerDiscoveryReceiver receiver;
   
-  public ControllerDiscoveryResponseHandler(ResponseHandlerInterface responseHandler, Socket socket) {
+  public ControllerDiscoveryResponseHandler(ControllerDiscoveryReceiver receiver, Socket socket) {
     this.socket = socket;
-    this.responseHandler = responseHandler;
+    this.receiver = receiver;
   }
   
   public void run() {
@@ -51,10 +48,7 @@ public class ControllerDiscoveryResponseHandler extends Thread {
         response += inputLine;
       }
       socket.close();
-      
-      if (!response.isEmpty()) {
-        responseHandler.sendSuccessMessage(200, null, response.getBytes("UTF-8"));
-      }
+      receiver.processResponse(response);
     } catch (IOException e) {
         e.printStackTrace();
     }
