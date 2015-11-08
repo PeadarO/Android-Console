@@ -28,27 +28,23 @@ Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 <project name="Android Console" default="jar" basedir=".">
 
 	<property file = "build.properties"/>
-
-	<!-- Some base dir used -->
-	<property name="project.name" value="androidconsole" />
-	<property name="lib.dir" value="lib" />
-	<property name="src.dir" value="src"/>
-	<property name="test.dir" value="test"/>
-	<property name="build.dir" value="bin"/>
-	<property name="output.dir" value="output"/>
-	<property name="jar.name" value="${project.name}-${version}.jar"/>
 	
 	<path id="project.class.path">
 		<pathelement location="${build.dir}"/>
-		<pathelement location="${lib.dir}/openremote/orentities-1.1.0.jar"/>
-        <pathelement location="${lib.dir}/httpclient/httpclient-4.3.jar"/>
-        <pathelement location="${lib.dir}/httpclient/httpcore-4.3.jar"/>
-        <pathelement location="${lib.dir}/apache/commons-logging-1.1.jar"/>
-        <pathelement location="${lib.dir}/loopj/android-async-http-1.4.4.jar"/>
-        <pathelement location="${android.sdk}"/>
+		<fileset dir="${lib.dir}">
+		  <include name="**/*.jar" />
+		</fileset>
+    <pathelement location="${android.sdk}"/>
 	</path>
-	
-	<target name="clean" description="deletes all generated files">
+
+  <path id="project.doc.path">
+		<path refid="project.class.path"/>
+    <pathelement location="src" />
+    <pathelement location="${orentities.src}" />
+	</path>
+
+  
+ 	<target name="clean" description="deletes all generated files">
 		<echo message="--------------------------------------------------------------------" />
 		<echo message=" Clean..." />
 		<echo message="--------------------------------------------------------------------" />
@@ -76,8 +72,11 @@ Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 		<echo message="--------------------------------------------------------------------" />
 		<echo message=" Compiling Java classes..." />
 		<echo message="--------------------------------------------------------------------" />
-		<echo message="" />
-		<javac failonerror="true" srcdir="${src.dir}" destdir="${build.dir}" source="1.6" target="1.6" nowarn="true" debug="true" debuglevel="lines,vars,source">
+    <echo message="" />
+    <echo message="CLASSPATH=" />
+		<echo>${toString:project.class.path}</echo>
+    <echo message="" />
+		<javac failonerror="true" srcdir="${src.dir}" destdir="${build.dir}" source="1.6" target="1.6" nowarn="true" debug="${build.debug}" debuglevel="lines,vars,source">
 			<classpath refid="project.class.path"/>
 		</javac>
 	</target>
@@ -89,4 +88,22 @@ Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 		<echo message="" />
 		<jar destfile="${output.dir}/${jar.name}" basedir="${build.dir}" />
 	</target>
+  
+  <target name="javadoc" description="Create javadocs">
+    <echo>${toString:project.doc.path}</echo>
+    <javadoc packagenames="org.openremote.*"
+             classpath="lib/*"
+             defaultexcludes="yes"
+             destdir="docs"
+             author="true"
+             version="true"
+             use="true"
+             windowtitle="Android Console Library API">
+      <sourcepath refid="project.doc.path" />
+      <doctitle><![CDATA[<h1>Android Console Library</h1>]]></doctitle>
+      <bottom><![CDATA[<i>Copyright &#169; 2015 OpenRemote Inc. All Rights Reserved.</i>]]></bottom>
+      <link href="http://docs.oracle.com/javase/6/docs/api/"/>
+    </javadoc>
+  
+  </target>
 </project>
