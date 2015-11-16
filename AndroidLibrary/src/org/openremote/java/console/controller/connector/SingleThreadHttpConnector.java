@@ -58,7 +58,7 @@ public class SingleThreadHttpConnector extends HttpConnector {
   protected void doRequest(String url, final ControllerCallback callback, Integer timeout) {
     boolean doHead = false;
 
-    if (callback.command == Command.GET_RESOURCE) {
+    if (callback.command == Command.GET_RESOURCE_DETAILS) {
       // Determine if we should load data if not do a head request
       Object[] data = (Object[]) callback.data;
       boolean loadData = (Boolean) data[2];

@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/OREntities"/>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="tests"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
-	<classpathentry kind="src" path="/OREntities"/>
+	<classpathentry kind="lib" path="lib/loopj/android-async-http-1.4.4.jar"/>
 	<classpathentry kind="lib" path="lib/httpclient/httpclient-4.3.jar"/>
 	<classpathentry kind="lib" path="lib/httpclient/httpcore-4.3.jar"/>
-	<classpathentry kind="lib" path="lib/loopj/android-async-http-1.4.4.jar"/>
 	<classpathentry kind="lib" path="lib/junit/junit-4.8.jar"/>
 	<classpathentry kind="lib" path="lib/apache/commons-logging-1.1.jar"/>
-	<classpathentry kind="lib" path="lib/openremote/orentities-1.1.0.jar"/>
+	<classpathentry kind="lib" path="C:/Tools/android-sdk/platforms/android-16/android.jar"/>
+	<classpathentry kind="lib" path="lib/jackson/jackson-annotations-2.3.2.jar"/>
+	<classpathentry kind="lib" path="lib/jackson/jackson-core-2.3.2.jar"/>
+	<classpathentry kind="lib" path="lib/jackson/jackson-databind-2.3.2.jar"/>
+	<classpathentry kind="lib" path="lib/jackson/jackson-dataformat-xml-2.3.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

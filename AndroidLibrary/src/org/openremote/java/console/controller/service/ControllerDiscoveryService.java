@@ -23,6 +23,7 @@ package org.openremote.java.console.controller.service;
 import org.openremote.java.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.java.console.controller.connector.AndroidHttpConnector;
 import org.openremote.java.console.controller.connector.ControllerConnector;
+import org.openremote.java.console.controller.connector.SingleThreadHttpConnector;
 
 /**
  * Controller discovery service for asynchronously discovering controllers within
@@ -33,7 +34,8 @@ import org.openremote.java.console.controller.connector.ControllerConnector;
 public class ControllerDiscoveryService {
   public static final int DEFAULT_SEARCH_DURATION = 5000;
   public static final int DEFAULT_TCP_PORT = 2346;
-  private static final ControllerConnector connector = new AndroidHttpConnector();
+  private static final ControllerConnector connector = new SingleThreadHttpConnector();
+//  private static final ControllerConnector connector = new AndroidHttpConnector();
   
   private ControllerDiscoveryService() {
     

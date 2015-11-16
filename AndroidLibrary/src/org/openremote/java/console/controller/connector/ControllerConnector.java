@@ -29,6 +29,7 @@ import org.openremote.entities.panel.PanelCommandResponse;
 import org.openremote.entities.panel.PanelInfo;
 import org.openremote.entities.panel.ResourceDataResponse;
 import org.openremote.entities.panel.ResourceInfo;
+import org.openremote.entities.panel.ResourceInfoDetails;
 import org.openremote.entities.panel.ResourceLocator;
 import org.openremote.entities.panel.version1.Panel;
 import org.openremote.entities.controller.AsyncControllerCallback;
@@ -66,7 +67,7 @@ public interface ControllerConnector {
   String getControllerIdentity();
 
   /**
-   * Sets the {@link org.openremote.java.controller.auth.Credentials} to be used
+   * Sets the {@link org.openremote.java.console.controller.auth.Credentials} to be used
    * by this connector
    * 
    * @param credentials
@@ -116,7 +117,7 @@ public interface ControllerConnector {
   void getPanelInfo(AsyncControllerCallback<List<PanelInfo>> callback, int timeout);
 
   /**
-   * Returns {@link org.openremote.web.console.panel.Panel} definition of the
+   * Returns {@link org.openremote.entities.panel.version1.Panel} definition of the
    * specified panel.
    * 
    * @param panelName
@@ -185,16 +186,15 @@ public interface ControllerConnector {
   void logout(AsyncControllerCallback<Boolean> callback, int timeout);
 
   /**
-   * Get the resource info for the requested resource optionally retrieve the
-   * data of the resource (otherwise lazy load)
+   * Get the resource info details for the requested resource
    * 
    * @param resourceLocator
    * @param resourceName
    * @param getData
    * @param resourceCallback
    */
-  void getResource(ResourceLocator resourceLocator, String resourceName, boolean getData,
-          AsyncControllerCallback<ResourceInfo> resourceCallback, int timeout);
+  void getResourceInfoDetails(ResourceLocator resourceLocator, String resourceName,
+          AsyncControllerCallback<ResourceInfoDetails> resourceCallback, int timeout);
 
   // /**
   // * Get the resource info for the requested resources optionally retrieve the

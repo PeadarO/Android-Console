@@ -23,6 +23,7 @@ package org.openremote.java.console.controller.connector;
 import org.apache.http.Header;
 import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.ControllerResponseCode;
+import org.openremote.entities.panel.ResourceLocator;
 import org.openremote.java.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.java.console.controller.auth.Credentials;
 
@@ -89,7 +90,7 @@ public class AndroidHttpConnector extends HttpConnector {
 
     boolean doHead = false;
 
-    if (callback.command == Command.GET_RESOURCE) {
+    if (callback.command == Command.GET_RESOURCE_DETAILS) {
       // Determine if we should load data if not do a head request
       Object[] data = (Object[]) callback.data;
       boolean loadData = (Boolean) data[2];

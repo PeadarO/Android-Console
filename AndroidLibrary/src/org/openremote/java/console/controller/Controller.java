@@ -23,6 +23,7 @@ package org.openremote.java.console.controller;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +34,9 @@ import org.openremote.entities.panel.CommandWidget;
 import org.openremote.entities.panel.PanelCommand;
 import org.openremote.entities.panel.PanelCommandResponse;
 import org.openremote.entities.panel.PanelInfo;
+import org.openremote.entities.panel.ResourceConsumer;
 import org.openremote.entities.panel.ResourceInfo;
+import org.openremote.entities.panel.ResourceInfoDetails;
 import org.openremote.entities.panel.ResourceLocator;
 import org.openremote.entities.panel.ResourceDataResponse;
 import org.openremote.entities.panel.version1.*;
@@ -146,15 +149,10 @@ public class Controller {
     }
 
     @Override
-    public void getResource(String resourceName, boolean getData,
-            final AsyncControllerCallback<ResourceInfo> resourceCallback) {
+    public void getResourceInfoDetails(String resourceName, final AsyncControllerCallback<ResourceInfoDetails> resourceCallback) {
       if (connector != null) {
-        if (loadResourceData) {
-          getData = true;
-        }
-
-        connector.getResource(this, resourceName, getData,
-                new AsyncControllerCallback<ResourceInfo>() {
+        connector.getResourceInfoDetails(this, resourceName,
+                new AsyncControllerCallback<ResourceInfoDetails>() {
 
                   @Override
                   public void onFailure(ControllerResponseCode error) {
@@ -165,7 +163,7 @@ public class Controller {
                   }
 
                   @Override
-                  public void onSuccess(ResourceInfo result) {
+                  public void onSuccess(ResourceInfoDetails result) {
                     if (cancelled) {
                       return;
                     }
@@ -191,7 +189,7 @@ public class Controller {
   private Map<Panel, LocatorHandler> registeredLocators = new HashMap<Panel, LocatorHandler>();
   private Map<Panel, CommandHandler> registeredSenders = new HashMap<Panel, CommandHandler>();
   // TODO: Inject the appropriate connector
-  private ControllerConnector connector = new AndroidHttpConnector();
+  private ControllerConnector connector = new SingleThreadHttpConnector();
   private String name;
   private String version;
   private boolean loadResourceData;
@@ -218,7 +216,7 @@ public class Controller {
   }
 
   /**
-   * Create a controller from the specified {@link org.openremote.java.console.controller.ControllerInfo}
+   * Create a controller from the specified {@link org.openremote.entities.controller.ControllerInfo}
    * @param controllerInfo
    * @throws ConnectionException
    */
@@ -227,7 +225,7 @@ public class Controller {
   }
   
   /**
-   * Create a controller from the specified {@link org.openremote.java.console.controller.ControllerInfo}
+   * Create a controller from the specified {@link org.openremote.entities.controller.ControllerInfo}
    * using the specified {@link org.openremote.java.console.controller.auth.Credentials} for the connection
    * @param controllerInfo
    * @param credentials
@@ -273,7 +271,7 @@ public class Controller {
   }
 
   /**
-   * Get the {@link org.openremote.java.console.controller.ControllerInfo} for this controller
+   * Get the {@link org.openremote.entities.controller.ControllerInfo} for this controller
    * @return
    */
   public ControllerInfo getControllerInfo() {
@@ -333,7 +331,7 @@ public class Controller {
         if (registeredMonitors.containsKey(panel)) {
           // Still registered
           monitor.start();
-          connectHandlers(widgets, locator, sender);
+          connectHandlers(panel, locator, sender);
         }
       }
 
@@ -357,7 +355,7 @@ public class Controller {
         // Start monitoring all sensor links and link handlers
         if (registeredMonitors.containsKey(panel)) {
           // Still registered
-          connectHandlers(widgets, locator, sender);
+          connectHandlers(panel, locator, sender);
           monitor.start();
         }
       }
@@ -365,11 +363,16 @@ public class Controller {
     }, timeout);
   }
 
-  private void connectHandlers(List<Widget> widgets, ResourceLocator locator, CommandSender sender) {
-    for (Widget widget : widgets) {
-      widget.setResourceLocator(locator);
-      if (widget instanceof CommandWidget) {
-        CommandWidget commandWidget = (CommandWidget) widget;
+  private void connectHandlers(Panel panel, ResourceLocator locator, CommandSender sender) {
+    List<ResourceConsumer> consumers = panel.getResourceConsumers();
+    
+    for (ResourceConsumer consumer : consumers) {
+      List<ResourceInfo> resources = consumer.getResources();
+      for (ResourceInfo resource : resources) {
+        resource.setResourceLocator(locator);
+      }
+      if (consumer instanceof CommandWidget) {
+        CommandWidget commandWidget = (CommandWidget) consumer;
         commandWidget.setCommandSender(sender);
       }
     }
@@ -392,12 +395,15 @@ public class Controller {
       monitor.cancel();
 
       // Remove resource locator and command sender
-      List<Widget> widgets = panel.getWidgets();
-
-      for (Widget widget : widgets) {
-        widget.setResourceLocator(null);
-        if (widget instanceof CommandWidget) {
-          CommandWidget commandWidget = (CommandWidget) widget;
+      List<ResourceConsumer> consumers = panel.getResourceConsumers();
+      
+      for (ResourceConsumer consumer : consumers) {
+        List<ResourceInfo> resources = consumer.getResources();
+        for (ResourceInfo resource : resources) {
+          resource.setResourceLocator(null);
+        }
+        if (consumer instanceof CommandWidget) {
+          CommandWidget commandWidget = (CommandWidget) consumer;
           commandWidget.setCommandSender(null);
         }
       }
@@ -420,7 +426,7 @@ public class Controller {
   }
 
   /**
-   * Gets the current for the force load resource data flag
+   * Gets the current value for the force load resource data flag
    * @return
    */
   public boolean getLoadResourceData() {
@@ -455,7 +461,7 @@ public class Controller {
   }
 
   /**
-   * Connects to this controller and calls the {@link AsyncControllerCallback<ControllerConnectionStatus>}
+   * Connects to this controller and calls the {@link org.openremote.entities.controller.AsyncControllerCallback<org.openremote.java.console.controller.ControllerConnectionStatus>}
    * callback to be called when finished. Using the specified timeout for the connection attempt.
    * Any already registered panels will resume monitoring when the connection is re-established.
    * @param callback
@@ -510,7 +516,7 @@ public class Controller {
   }
 
   /**
-   * Connects to this controller and calls the {@link AsyncControllerCallback<ControllerConnectionStatus>}
+   * Connects to this controller and calls the {@link org.openremote.entities.controller.AsyncControllerCallback<org.openremote.java.console.controller.ControllerConnectionStatus>}
    * callback to be called when finished. Using the default controller timeout for the connection attempt.
    * Any already registered panels will resume monitoring when the connection is re-established.
    * @param callback
@@ -546,7 +552,7 @@ public class Controller {
   }
 
   /**
-   * Get {@link List<PanelInfo>} asynchronously from this controller
+   * Get {@link java.util.List<org.openremote.entities.panel.PanelInfo>} asynchronously from this controller
    * @param callback
    * @param timeout
    */
@@ -555,7 +561,7 @@ public class Controller {
   }
 
   /**
-   * Get {@link List<PanelInfo>} asynchronously from this controller
+   * Get {@link java.util.List<org.openremote.entities.panel.PanelInfo>} asynchronously from this controller
    * @param callback
    */
   public void getPanelInfo(AsyncControllerCallback<List<PanelInfo>> callback) {

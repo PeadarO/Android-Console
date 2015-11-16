@@ -33,8 +33,8 @@ import org.apache.http.Header;
 import org.openremote.entities.panel.PanelCommand;
 import org.openremote.entities.panel.PanelCommandResponse;
 import org.openremote.entities.panel.PanelInfo;
-import org.openremote.entities.panel.ResourceInfo;
 import org.openremote.entities.panel.ResourceDataResponse;
+import org.openremote.entities.panel.ResourceInfoDetails;
 import org.openremote.entities.panel.ResourceLocator;
 import org.openremote.entities.panel.version1.Panel;
 import org.openremote.entities.util.JacksonProcessor;
@@ -48,9 +48,6 @@ import org.openremote.entities.controller.SensorStatusList;
 import org.openremote.java.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.java.console.controller.ControllerConnectionStatus;
 import org.openremote.java.console.controller.auth.Credentials;
-
-import com.loopj.android.http.AsyncHttpResponseHandler;
-import com.loopj.android.http.ResponseHandlerInterface;
 
 /**
  * Base class for HTTP connector implementations
@@ -68,7 +65,7 @@ abstract class HttpConnector implements ControllerConnector {
     LOGIN(""),
     LOGOUT(""),
     CONNECT("rest/servers"),
-    GET_RESOURCE(""),
+    GET_RESOURCE_DETAILS(""),
     GET_RESOURCE_DATA(""),
     DISCOVERY(""),
     STOP_DISCOVERY("");
@@ -187,13 +184,13 @@ abstract class HttpConnector implements ControllerConnector {
   }
 
   @Override
-  public void getResource(ResourceLocator resourceLocator, String resourceName, boolean getData,
-          AsyncControllerCallback<ResourceInfo> callback, int timeout) {
+  public void getResourceInfoDetails(ResourceLocator resourceLocator, String resourceName,
+          AsyncControllerCallback<ResourceInfoDetails> callback, int timeout) {
     // Check URL is valid
     if (controllerUrl != null) {
-      Object[] data = new Object[] { resourceLocator, resourceName, getData };
-      doRequest(buildRequestUrl(new String[] { resourceName }, Command.GET_RESOURCE),
-              new ControllerCallback(Command.GET_RESOURCE, callback, data), timeout);
+      Object[] data = new Object[] { resourceLocator, resourceName };
+      doRequest(buildRequestUrl(new String[] { resourceName }, Command.GET_RESOURCE_DETAILS),
+              new ControllerCallback(Command.GET_RESOURCE_DETAILS, callback, data), timeout);
     }
   }
 
@@ -369,21 +366,20 @@ abstract class HttpConnector implements ControllerConnector {
       }
       break;
     }
-    case GET_RESOURCE:
+    case GET_RESOURCE_DETAILS:
     {
       if (responseCode != 200) {
         processError(callback, responseData);
         return;
       }
 
-      AsyncControllerCallback<ResourceInfo> resourceCallback = (AsyncControllerCallback<ResourceInfo>) callback;
+      AsyncControllerCallback<ResourceInfoDetails> resourceCallback = (AsyncControllerCallback<ResourceInfoDetails>) callback;
 
       if (data == null || !(data instanceof Object[])) {
         callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
       }
 
       Object[] objs = (Object[]) data;
-      boolean loadData = (Boolean) objs[2];
       String contentType = null;
       Date modifiedTime = null;
       byte[] contentData = null;
@@ -403,11 +399,7 @@ abstract class HttpConnector implements ControllerConnector {
       }
 
       // Set data
-      if (loadData) {
-        contentData = responseData;
-      }
-      resourceCallback.onSuccess(new ResourceInfo((ResourceLocator) objs[0], (String) objs[1],
-              modifiedTime, contentType, contentData));
+      resourceCallback.onSuccess(new ResourceInfoDetails(modifiedTime, contentType));
       break;
     }
     case GET_RESOURCE_DATA:
