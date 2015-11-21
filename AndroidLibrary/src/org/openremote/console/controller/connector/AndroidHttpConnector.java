@@ -18,14 +18,26 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.openremote.java.console.controller.connector;
+package org.openremote.console.controller.connector;
+
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.http.Header;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.protocol.HTTP;
+import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
+import org.openremote.console.controller.auth.Credentials;
 import org.openremote.entities.controller.AsyncControllerCallback;
+import org.openremote.entities.controller.Command;
+import org.openremote.entities.controller.CommandResponse;
 import org.openremote.entities.controller.ControllerResponseCode;
-import org.openremote.entities.panel.ResourceLocator;
-import org.openremote.java.console.controller.AsyncControllerDiscoveryCallback;
-import org.openremote.java.console.controller.auth.Credentials;
+import org.openremote.entities.controller.Device;
+import org.openremote.entities.controller.DeviceInfo;
 
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.ResponseHandlerInterface;
@@ -44,8 +56,8 @@ public class AndroidHttpConnector extends HttpConnector {
   }
 
   @Override
-  protected void doRequest(String url, final ControllerCallback callback, Integer timeout) {
-    if (callback.command == Command.DISCOVERY) {
+  protected void doRequest(String url, Map<String, String> headers, String content, final ControllerCallback callback, Integer timeout) {
+    if (callback.command == RestCommand.DISCOVERY) {
       ResponseHandlerInterface handler = new AsyncHttpResponseHandler() {
         @Override
         public void onStart() {
@@ -83,26 +95,21 @@ public class AndroidHttpConnector extends HttpConnector {
       return;
     }
     
-    if (callback.command == Command.STOP_DISCOVERY) {
+    if (callback.command == RestCommand.STOP_DISCOVERY) {
       client.stopDiscovery();
       return;
     }
 
     boolean doHead = false;
 
-    if (callback.command == Command.GET_RESOURCE_DETAILS) {
-      // Determine if we should load data if not do a head request
-      Object[] data = (Object[]) callback.data;
-      boolean loadData = (Boolean) data[2];
-      if (!loadData) {
-        doHead = true;
-      }
+    if (callback.command == RestCommand.GET_RESOURCE_DETAILS) {
+      doHead = true;
     }
 
     ResponseHandlerInterface handler = new AsyncHttpResponseHandler() {
       @Override
       public void onSuccess(int code, Header[] headers, byte[] response) {
-        if (callback.command == Command.LOGOUT) {
+        if (callback.command == RestCommand.LOGOUT) {
           client.clearBasicAuth();
           return;
         }
@@ -120,7 +127,30 @@ public class AndroidHttpConnector extends HttpConnector {
     if (doHead) {
       client.head(url, handler);
     } else {
-      client.get(url, handler);
+      StringEntity entity = null;
+      Header[] headerArr = null;
+      
+      if (headers != null) {
+        List<Header> headerList = new ArrayList<Header>();
+        
+        for (Entry<String,String> entry : headers.entrySet()) {
+          headerList.add(new BasicHeader(entry.getKey(), entry.getValue()));
+        }
+        
+        headerArr = headerList.toArray(new Header[0]);
+      }
+      
+      if (content != null) {
+        try {
+          entity = new StringEntity(content);
+          entity.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, "application/json"));
+        } catch (UnsupportedEncodingException e) {
+          callback.callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
+          return;
+        }
+      }
+      
+      client.post(null, url, headerArr, entity, "application/json", handler);
     }
   }
   
@@ -140,7 +170,7 @@ public class AndroidHttpConnector extends HttpConnector {
     credentials = null;
     
     if (controllerUrl != null) {
-      doRequest(buildRequestUrl(Command.LOGOUT), new ControllerCallback(Command.LOGOUT, callback),
+      doRequest(buildRequestUrl(RestCommand.LOGOUT), null, null, new ControllerCallback(RestCommand.LOGOUT, callback),
               timeout);
     }
     else {

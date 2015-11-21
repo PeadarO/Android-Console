@@ -18,15 +18,30 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.openremote.java.console.controller.auth;
+package org.openremote.console.controller.auth;
 
 /**
- * Simple interface for storing username and password credentials
+ * Username and password Credentials
+ * 
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
- *
  */
-public interface Credentials {
-  public String getUsername();
+public class UserPasswordCredentials implements Credentials {
+  private String username;
+  private String password;
 
-  public String getPassword();
+  public UserPasswordCredentials(String username, String password) {
+    this.username = username;
+    this.password = password;
+  }
+
+  @Override
+  public String getPassword() {
+    return password;
+  }
+
+  @Override
+  public String getUsername() {
+    return username;
+  }
+
 }

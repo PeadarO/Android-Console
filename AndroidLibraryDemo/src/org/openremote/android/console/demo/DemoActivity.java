@@ -4,23 +4,23 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.List;
 
+import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
+import org.openremote.console.controller.Controller;
+import org.openremote.console.controller.ControllerConnectionStatus;
+import org.openremote.console.controller.service.ControllerDiscoveryService;
+import org.openremote.entities.panel.ImageWidget;
+import org.openremote.entities.panel.LabelWidget;
+import org.openremote.entities.panel.Panel;
 import org.openremote.entities.panel.PanelInfo;
 import org.openremote.entities.panel.ResourceDataResponse;
 import org.openremote.entities.panel.ResourceInfo;
-import org.openremote.entities.panel.version1.SwitchWidget.State;
-import org.openremote.entities.panel.version1.ImageWidget;
-import org.openremote.entities.panel.version1.LabelWidget;
-import org.openremote.entities.panel.version1.Panel;
-import org.openremote.entities.panel.version1.SliderWidget;
-import org.openremote.entities.panel.version1.SwitchWidget;
-import org.openremote.entities.panel.version1.Widget;
+import org.openremote.entities.panel.SliderWidget;
+import org.openremote.entities.panel.SwitchWidget;
+import org.openremote.entities.panel.Widget;
+import org.openremote.entities.panel.SwitchWidget.State;
 import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.ControllerInfo;
 import org.openremote.entities.controller.ControllerResponseCode;
-import org.openremote.java.console.controller.AsyncControllerDiscoveryCallback;
-import org.openremote.java.console.controller.Controller;
-import org.openremote.java.console.controller.ControllerConnectionStatus;
-import org.openremote.java.console.controller.service.ControllerDiscoveryService;
 
 import android.os.Bundle;
 import android.app.Activity;
@@ -150,7 +150,7 @@ public class DemoActivity extends Activity {
   
   private void getPanelInfo() {
     writeLine("Getting Panel List:");
-    controller.getPanelInfo(new AsyncControllerCallback<List<PanelInfo>>() {
+    controller.getPanelList(new AsyncControllerCallback<List<PanelInfo>>() {
       @Override
       public void onSuccess(List<PanelInfo> result) {
         writeLine("Success! Panel Names:");

@@ -18,30 +18,21 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.openremote.java.console.controller.auth;
+package org.openremote.console.controller;
 
 /**
- * Username and password Credentials
- * 
+ * Simple exception definition for connection exceptions
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
+ *
  */
-public class UserPasswordCredentials implements Credentials {
-  private String username;
-  private String password;
-
-  public UserPasswordCredentials(String username, String password) {
-    this.username = username;
-    this.password = password;
+public class ConnectionException extends Exception {
+  private static final long serialVersionUID = 5206350896312447990L;
+  
+  ConnectionException(String message) {
+    super(message);
   }
 
-  @Override
-  public String getPassword() {
-    return password;
+  ConnectionException(Exception e) {
+    super(e);
   }
-
-  @Override
-  public String getUsername() {
-    return username;
-  }
-
 }

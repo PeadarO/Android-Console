@@ -18,24 +18,27 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.openremote.java.console.controller.connector;
+package org.openremote.console.controller.connector;
 
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
 
-import org.openremote.entities.panel.PanelCommand;
-import org.openremote.entities.panel.PanelCommandResponse;
+import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
+import org.openremote.console.controller.ControllerConnectionStatus;
+import org.openremote.console.controller.auth.Credentials;
+import org.openremote.entities.panel.Panel;
 import org.openremote.entities.panel.PanelInfo;
 import org.openremote.entities.panel.ResourceDataResponse;
-import org.openremote.entities.panel.ResourceInfo;
 import org.openremote.entities.panel.ResourceInfoDetails;
 import org.openremote.entities.panel.ResourceLocator;
-import org.openremote.entities.panel.version1.Panel;
 import org.openremote.entities.controller.AsyncControllerCallback;
-import org.openremote.java.console.controller.AsyncControllerDiscoveryCallback;
-import org.openremote.java.console.controller.ControllerConnectionStatus;
-import org.openremote.java.console.controller.auth.Credentials;
+import org.openremote.entities.controller.Command;
+import org.openremote.entities.controller.CommandResponse;
+import org.openremote.entities.controller.ControlCommand;
+import org.openremote.entities.controller.ControlCommandResponse;
+import org.openremote.entities.controller.Device;
+import org.openremote.entities.controller.DeviceInfo;
 
 /**
  * This interface defines the contract for controller connectors.
@@ -67,7 +70,7 @@ public interface ControllerConnector {
   String getControllerIdentity();
 
   /**
-   * Sets the {@link org.openremote.java.console.controller.auth.Credentials} to be used
+   * Sets the {@link org.openremote.console.controller.auth.Credentials} to be used
    * by this connector
    * 
    * @param credentials
@@ -114,10 +117,10 @@ public interface ControllerConnector {
    * @param timeout
    *          Timeout in milliseconds for this command
    */
-  void getPanelInfo(AsyncControllerCallback<List<PanelInfo>> callback, int timeout);
+  void getPanelList(AsyncControllerCallback<List<PanelInfo>> callback, int timeout);
 
   /**
-   * Returns {@link org.openremote.entities.panel.version1.Panel} definition of the
+   * Returns {@link org.openremote.entities.panel.Panel} definition of the
    * specified panel.
    * 
    * @param panelName
@@ -131,18 +134,35 @@ public interface ControllerConnector {
   void getPanel(String panelName, AsyncControllerCallback<Panel> callback, int timeout);
 
   /**
-   * Returns {@link Boolean} indicating whether command send request was
+   * Returns {@link Boolean} indicating whether control command send request was
    * successful.
    * 
    * @param command
-   *          Command to send
+   *          Control Command to send
    * @param callback
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
    * @param timeout
    *          Timeout in milliseconds for this command
    */
-  void sendCommand(PanelCommand command, AsyncControllerCallback<PanelCommandResponse> callback,
+  void sendControlCommand(ControlCommand command, AsyncControllerCallback<ControlCommandResponse> callback,
+          int timeout);
+  
+  /**
+   * Returns {@link Boolean} indicating whether command send request was
+   * successful.
+   * 
+   * @param command
+   *          Command to send
+   * @param parameter
+   *          Command parameter for use with ${param} dynamic command values
+   * @param callback
+   *          {@link AsyncControllerCallback} callback for handling the response
+   *          asynchronously
+   * @param timeout
+   *          Timeout in milliseconds for this command
+   */
+  void sendCommand(Command command, String parameter, AsyncControllerCallback<CommandResponse> callback,
           int timeout);
 
   /**
@@ -239,4 +259,18 @@ public interface ControllerConnector {
    * @return
    */
   boolean isDiscoveryRunning();
+
+  /**
+   * Returns {@link java.util.List<org.openremote.entities.controller.DeviceInfo>} of
+   * devices that are recognised by this controller.
+   * 
+   * @param callback
+   *          {@link AsyncControllerCallback} callback for handling the response
+   *          asynchronously
+   * @param timeout
+   *          Timeout in milliseconds for this command
+   */
+  void getDeviceList(AsyncControllerCallback<List<DeviceInfo>> callback, int timeout);
+
+  void getDevice(String deviceName, AsyncControllerCallback<Device> callback, int timeout);
 }

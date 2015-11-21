@@ -18,33 +18,26 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.openremote.java.console.controller;
+package org.openremote.console.controller;
 
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.openremote.entities.panel.CommandSender;
-import org.openremote.entities.panel.CommandWidget;
-import org.openremote.entities.panel.PanelCommand;
-import org.openremote.entities.panel.PanelCommandResponse;
-import org.openremote.entities.panel.PanelInfo;
-import org.openremote.entities.panel.ResourceConsumer;
-import org.openremote.entities.panel.ResourceInfo;
-import org.openremote.entities.panel.ResourceInfoDetails;
-import org.openremote.entities.panel.ResourceLocator;
-import org.openremote.entities.panel.ResourceDataResponse;
-import org.openremote.entities.panel.version1.*;
+import org.openremote.console.controller.auth.Credentials;
+import org.openremote.console.controller.connector.ControllerConnector;
+import org.openremote.console.controller.connector.SingleThreadHttpConnector;
+import org.openremote.entities.panel.*;
 import org.openremote.entities.controller.AsyncControllerCallback;
+import org.openremote.entities.controller.CommandSender;
 import org.openremote.entities.controller.ControllerInfo;
 import org.openremote.entities.controller.ControllerResponseCode;
-import org.openremote.java.console.controller.auth.Credentials;
-import org.openremote.java.console.controller.connector.*;
+import org.openremote.entities.controller.Device;
+import org.openremote.entities.controller.DeviceInfo;
 
 /**
  * This is the main Controller class used for interacting with a controller; the
@@ -52,147 +45,17 @@ import org.openremote.java.console.controller.connector.*;
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  */
 public class Controller {
-  class MonitorHandler implements AsyncControllerCallback<Map<Integer, String>> {
-    private List<SensoryWidget> monitoredWidgets;
-    private int[] sensorIds;
-    private boolean cancelled = false;
-    
-    MonitorHandler(List<SensoryWidget> monitoredWidgets, int[] sensorIds) {
-      this.monitoredWidgets = monitoredWidgets;
-      this.sensorIds = sensorIds;
-    }
-
-    void start() {
-      if (connector != null) {
-        // Use timeout > 50s so that controller returns timeout response
-        connector.monitorSensors(sensorIds, this, 55000);
-      }
-    }
-
-    void cancel() {
-      cancelled = true;
-    }
-
-    @Override
-    public void onFailure(ControllerResponseCode error) {
-      if (cancelled) {
-        return;
-      }
-      // TODO Need to do something about failed polling (notify the console
-      // app?)
-      start();
-    }
-
-    @Override
-    public void onSuccess(Map<Integer, String> result) {
-      if (cancelled) {
-        return;
-      }
-
-      if (result != null) {
-        // Call on sensor changed for each changed sensor
-        for (Entry<Integer, String> entry : result.entrySet()) {
-          for (SensoryWidget widget : monitoredWidgets) {
-            for (SensorLink link : widget.getSensorLinks()) {
-              if (entry.getKey().equals(link.getRef())) {
-                widget.onSensorValueChanged(link.getRef(), entry.getValue());
-              }
-            }
-          }
-        }
-      }
-
-      start();
-    }
-  };
-
-  class CommandHandler implements CommandSender {
-    private boolean cancelled = false;
-
-    void cancel() {
-      cancelled = true;
-    }
-
-    @Override
-    public void sendCommand(PanelCommand command,
-            final AsyncControllerCallback<PanelCommandResponse> callback) {
-      if (connector != null) {
-        Controller.this.connector.sendCommand(command,
-                new AsyncControllerCallback<PanelCommandResponse>() {
-
-                  @Override
-                  public void onFailure(ControllerResponseCode error) {
-                    if (cancelled) {
-                      return;
-                    }
-                    callback.onFailure(error);
-                  }
-
-                  @Override
-                  public void onSuccess(PanelCommandResponse result) {
-                    if (cancelled) {
-                      return;
-                    }
-                    callback.onSuccess(result);
-                  }
-
-                }, Controller.this.timeout);
-      }
-    }
-  };
-
-  class LocatorHandler implements ResourceLocator {
-    private boolean cancelled = false;
-
-    public void cancel() {
-      cancelled = true;
-    }
-
-    @Override
-    public void getResourceInfoDetails(String resourceName, final AsyncControllerCallback<ResourceInfoDetails> resourceCallback) {
-      if (connector != null) {
-        connector.getResourceInfoDetails(this, resourceName,
-                new AsyncControllerCallback<ResourceInfoDetails>() {
-
-                  @Override
-                  public void onFailure(ControllerResponseCode error) {
-                    if (cancelled) {
-                      return;
-                    }
-                    resourceCallback.onFailure(error);
-                  }
-
-                  @Override
-                  public void onSuccess(ResourceInfoDetails result) {
-                    if (cancelled) {
-                      return;
-                    }
-                    resourceCallback.onSuccess(result);
-                  }
-
-                }, Controller.this.timeout);
-      }
-    }
-
-    @Override
-    public void getResourceData(String resourceName,
-            AsyncControllerCallback<ResourceDataResponse> resourceDataCallback) {
-      if (connector != null) {
-        connector.getResourceData(resourceName, resourceDataCallback, Controller.this.timeout);
-      }
-    }
-  }
-
   public static final int DEFAULT_TIMEOUT = 5000;
   private int timeout = DEFAULT_TIMEOUT;
-  private Map<Panel, MonitorHandler> registeredMonitors = new HashMap<Panel, MonitorHandler>();
-  private Map<Panel, LocatorHandler> registeredLocators = new HashMap<Panel, LocatorHandler>();
-  private Map<Panel, CommandHandler> registeredSenders = new HashMap<Panel, CommandHandler>();
+  private Map<Panel, ControllerSensorMonitor> panelMonitors = new HashMap<Panel, ControllerSensorMonitor>();
+  private Map<Panel, ControllerResourceLocator> resourceLocators = new HashMap<Panel, ControllerResourceLocator>();
+  private Map<Panel, ControllerCommandSender> panelSenders = new HashMap<Panel, ControllerCommandSender>();
+  private Map<Device, ControllerSensorMonitor> deviceMonitors = new HashMap<Device, ControllerSensorMonitor>();
+  private Map<Device, ControllerCommandSender> deviceSenders = new HashMap<Device, ControllerCommandSender>();
   // TODO: Inject the appropriate connector
   private ControllerConnector connector = new SingleThreadHttpConnector();
   private String name;
   private String version;
-  private boolean loadResourceData;
   private AsyncControllerCallback<ControllerConnectionStatus> connectCallback;
   private ControllerInfo controllerInfo;
 
@@ -207,7 +70,7 @@ public class Controller {
 
   /**
    * Create a controller from the specified string URL using the specified
-   * {@link org.openremote.java.console.controller.auth.Credentials} for the connection
+   * {@link org.openremote.console.controller.auth.Credentials} for the connection
    * @param url
    * @param credentials
    */
@@ -226,7 +89,7 @@ public class Controller {
   
   /**
    * Create a controller from the specified {@link org.openremote.entities.controller.ControllerInfo}
-   * using the specified {@link org.openremote.java.console.controller.auth.Credentials} for the connection
+   * using the specified {@link org.openremote.console.controller.auth.Credentials} for the connection
    * @param controllerInfo
    * @param credentials
    * @throws ConnectionException
@@ -254,7 +117,7 @@ public class Controller {
   }
 
   /**
-   * Set the {@link org.openremote.java.console.controller.auth.Credentials} to be used for this
+   * Set the {@link org.openremote.console.controller.auth.Credentials} to be used for this
    * connection
    * @param credentials
    */
@@ -263,7 +126,7 @@ public class Controller {
   }
 
   /**
-   * Get the {@link org.openremote.java.console.controller.auth.Credentials} used by this controller
+   * Get the {@link org.openremote.console.controller.auth.Credentials} used by this controller
    * @return
    */
   public Credentials getCredentials() {
@@ -287,14 +150,16 @@ public class Controller {
    * 
    * @param panel
    */
-  public void registerPanel(final Panel panel) {
-    if (panel == null || registeredLocators.containsKey(panel)) {
+  public synchronized void registerPanel(final Panel panel) {
+    if (panel == null || resourceLocators.containsKey(panel)) {
       return;
     }
 
-    final CommandHandler sender = new CommandHandler();
-    final LocatorHandler locator = new LocatorHandler();
-
+    final ControllerCommandSender sender = new ControllerCommandSender();
+    final ControllerResourceLocator locator = new ControllerResourceLocator();
+    sender.setConnector(connector);
+    locator.setConnector(connector);
+    
     final List<Widget> widgets = panel.getWidgets();
     List<SensoryWidget> monitoredWidgets = new ArrayList<SensoryWidget>();
     List<Integer> monitorIds = new ArrayList<Integer>();
@@ -317,50 +182,73 @@ public class Controller {
     }
 
     // Store panel as registered
-    final MonitorHandler monitor = new MonitorHandler(monitoredWidgets, sensorIds);
-    registeredMonitors.put(panel, monitor);
-    registeredLocators.put(panel, locator);
-    registeredSenders.put(panel, sender);
+    final ControllerSensorMonitor monitor = new ControllerSensorMonitor(monitoredWidgets, sensorIds);
+    monitor.setConnector(connector);
+    panelMonitors.put(panel, monitor);
+    resourceLocators.put(panel, locator);
+    panelSenders.put(panel, sender);
 
     // Get initial values for all sensors
-    connector.getSensorValues(sensorIds, new AsyncControllerCallback<Map<Integer, String>>() {
-      @Override
-      public void onFailure(ControllerResponseCode error) {
-        // If there's a problem getting initial sensor values then should we
-        // unregister the panel
-        if (registeredMonitors.containsKey(panel)) {
-          // Still registered
-          monitor.start();
-          connectHandlers(panel, locator, sender);
+    if (sensorIds.length > 0) {
+      connector.getSensorValues(sensorIds, new AsyncControllerCallback<Map<Integer, String>>() {
+        @Override
+        public void onFailure(ControllerResponseCode error) {
+          // If there's a problem getting initial sensor values then should we
+          // unregister the panel
+          if (panelMonitors.containsKey(panel)) {
+            unregisterPanel(panel);
+          }
         }
-      }
-
-      @Override
-      public void onSuccess(Map<Integer, String> result) {
-        // Process responses
-        if (result != null) {
-          // Call on sensor changed for each changed sensor
-          List<SensoryWidget> sensoryWidgets = panel.getWidgets(SensoryWidget.class);
-          for (Entry<Integer, String> entry : result.entrySet()) {
-            for (SensoryWidget widget : sensoryWidgets) {
-              for (SensorLink link : widget.getSensorLinks()) {
-                if (entry.getKey().equals(link.getRef())) {
-                  widget.onSensorValueChanged(link.getRef(), entry.getValue());
+  
+        @Override
+        public void onSuccess(Map<Integer, String> result) {
+          // Start monitoring all sensor links and link handlers
+          if (panelMonitors.containsKey(panel)) {
+            // Still registered
+            connectHandlers(panel, locator, sender);
+            monitor.start();
+          }
+          
+          // Process responses
+          if (result != null) {
+            // Call on sensor changed for each changed sensor
+            List<SensoryWidget> sensoryWidgets = panel.getWidgets(SensoryWidget.class);
+            for (Entry<Integer, String> entry : result.entrySet()) {
+              for (SensoryWidget widget : sensoryWidgets) {
+                for (SensorLink link : widget.getSensorLinks()) {
+                  if (entry.getKey().equals(link.getRef())) {
+                    widget.onSensorValueChanged(link.getRef(), entry.getValue());
+                  }
                 }
               }
             }
           }
         }
-
-        // Start monitoring all sensor links and link handlers
-        if (registeredMonitors.containsKey(panel)) {
-          // Still registered
-          connectHandlers(panel, locator, sender);
-          monitor.start();
-        }
-      }
-
-    }, timeout);
+  
+      }, timeout);
+    } else {
+      // Start monitoring all sensor links and link handlers
+      if (panelMonitors.containsKey(panel)) {
+        // Still registered
+        connectHandlers(panel, locator, sender);
+        monitor.start();
+      } 
+    }
+  }
+  
+  /**
+   * Registers the device with this controller (it is the caller's responsibility
+   * to ensure that the device belongs to this controller; otherwise callbacks
+   * will fail or return unexpected results). Registering means that you will be
+   * able to send commands to the device and you will receive notification
+   * of sensor value changes.
+   * 
+   * @param device
+   */
+  public void registerDevice(Device device) {
+//    if (device == null || registeredLocators.containsKey(panel)) {
+//      return;
+//    }
   }
 
   private void connectHandlers(Panel panel, ResourceLocator locator, CommandSender sender) {
@@ -368,8 +256,10 @@ public class Controller {
     
     for (ResourceConsumer consumer : consumers) {
       List<ResourceInfo> resources = consumer.getResources();
-      for (ResourceInfo resource : resources) {
-        resource.setResourceLocator(locator);
+      if (resources != null) {
+        for (ResourceInfo resource : resources) {
+          resource.setResourceLocator(locator);
+        }
       }
       if (consumer instanceof CommandWidget) {
         CommandWidget commandWidget = (CommandWidget) consumer;
@@ -384,15 +274,15 @@ public class Controller {
    * 
    * @param panel
    */
-  public void unregisterPanel(Panel panel) {
+  public synchronized void unregisterPanel(Panel panel) {
     // Remove panel
-    if (registeredLocators.containsKey(panel)) {
-      MonitorHandler monitor = registeredMonitors.get(panel);
-      LocatorHandler locator = registeredLocators.get(panel);
-      CommandHandler sender = registeredSenders.get(panel);
-      locator.cancel();
-      sender.cancel();
-      monitor.cancel();
+    if (resourceLocators.containsKey(panel)) {
+      ControllerSensorMonitor monitor = panelMonitors.get(panel);
+      ControllerResourceLocator locator = resourceLocators.get(panel);
+      ControllerCommandSender sender = panelSenders.get(panel);
+      locator.disable();
+      sender.disable();
+      monitor.disable();
 
       // Remove resource locator and command sender
       List<ResourceConsumer> consumers = panel.getResourceConsumers();
@@ -408,30 +298,22 @@ public class Controller {
         }
       }
 
-      registeredMonitors.remove(panel);
-      registeredLocators.remove(panel);
-      registeredSenders.remove(panel);
+      panelMonitors.remove(panel);
+      resourceLocators.remove(panel);
+      panelSenders.remove(panel);
     }
   }
-
+  
   /**
-   * Set the force load resource data flag; determines if resource data should be automatically fetched
-   * when a resource is resolved into a {@link org.openremote.entities.panel.ResourceInfo} object.
-   * If using caching then this should be false and then {@link org.openremote.entities.panel.ResourceInfo#getModifiedTime()}
-   * can be compared to the cached resource modified time
-   * @param loadResourceData
+   * Unregisters a device from the controller; no more sensor
+   * change notifications will be received and it will no longer
+   * be possible to send commands to this device
+   * @param device
    */
-  public void setLoadResourceData(boolean loadResourceData) {
-    this.loadResourceData = loadResourceData;
+  public synchronized void unregisterDevice(Device device) {
+    
   }
 
-  /**
-   * Gets the current value for the force load resource data flag
-   * @return
-   */
-  public boolean getLoadResourceData() {
-    return this.loadResourceData;
-  }
 
   // ------------------------------------------------------------------------------
   // Connector Wrapper Methods
@@ -493,16 +375,16 @@ public class Controller {
       @Override
       public void onSuccess(ControllerConnectionStatus result) {
         // start any existing sensor monitors for already registered panels
-        for (CommandHandler sender : registeredSenders.values()) {
-          sender.cancelled = false;
+        for (ControllerCommandSender sender : panelSenders.values()) {
+          sender.enable();
         }
         
-        for (LocatorHandler locator : registeredLocators.values()) {
-          locator.cancelled = false;
+        for (ControllerResourceLocator locator : resourceLocators.values()) {
+          locator.enable();
         }
         
-        for (MonitorHandler monitor : registeredMonitors.values()) {
-          monitor.cancelled = false;
+        for (ControllerSensorMonitor monitor : panelMonitors.values()) {
+          monitor.enable();
           monitor.start();
         }
         callback.onSuccess(result);
@@ -530,21 +412,21 @@ public class Controller {
    * receive change notifications, be able to resolve resources and/or send commands
    */
   public void disconnect() {
-    for (MonitorHandler monitor : registeredMonitors.values()) {
-      monitor.cancel();
+    for (ControllerSensorMonitor monitor : panelMonitors.values()) {
+      monitor.disable();
     }
-    for (CommandHandler sender : registeredSenders.values()) {
-      sender.cancel();
+    for (ControllerCommandSender sender : panelSenders.values()) {
+      sender.disable();
     }
-    for (LocatorHandler locator : registeredLocators.values()) {
-      locator.cancel();
+    for (ControllerResourceLocator locator : resourceLocators.values()) {
+      locator.disable();
     }
 
     connector.disconnect();
   }
 
   /**
-   * Indicates if the controller is currently connected
+   * Indicates if this controller is currently connected
    * @return
    */
   public boolean isConnected() {
@@ -552,24 +434,24 @@ public class Controller {
   }
 
   /**
-   * Get {@link java.util.List<org.openremote.entities.panel.PanelInfo>} asynchronously from this controller
+   * Get list of {@link org.openremote.entities.panel.PanelInfo} names asynchronously from this controller
    * @param callback
    * @param timeout
    */
-  public void getPanelInfo(AsyncControllerCallback<List<PanelInfo>> callback, int timeout) {
-    connector.getPanelInfo(callback, timeout);
+  public void getPanelList(AsyncControllerCallback<List<PanelInfo>> callback, int timeout) {
+    connector.getPanelList(callback, timeout);
   }
 
   /**
-   * Get {@link java.util.List<org.openremote.entities.panel.PanelInfo>} asynchronously from this controller
+   * Get list of {@link org.openremote.entities.panel.PanelInfo} names asynchronously from this controller
    * @param callback
    */
-  public void getPanelInfo(AsyncControllerCallback<List<PanelInfo>> callback) {
-    getPanelInfo(callback, timeout);
+  public void getPanelList(AsyncControllerCallback<List<PanelInfo>> callback) {
+    getPanelList(callback, timeout);
   }
 
   /**
-   * Get the specified {@link Panel} from the controller
+   * Get the specified {@link org.openremote.entities.panel.Panel} from this controller
    * @param panelName
    * @param callback
    * @param timeout
@@ -579,7 +461,7 @@ public class Controller {
   }
 
   /**
-   * Get the specified {@link Panel} from the controller
+   * Get the specified {@link org.openremote.entities.panel.Panel} from this controller
    * @param panelName
    * @param callback
    */
@@ -587,6 +469,42 @@ public class Controller {
     getPanel(panelName, callback, timeout);
   }
 
+  /**
+   * Get list of {@link org.openremote.entities.controller.Device} names asynchronously from this controller
+   * @param callback
+   */
+  public void getDeviceList(AsyncControllerCallback<List<DeviceInfo>> callback) {
+    getDeviceList(callback,timeout);
+  }
+  
+  /**
+   * Get list of {@link org.openremote.entities.controller.Device} names asynchronously from this controller
+   * @param callback
+   * @param timeout
+   */
+  public void getDeviceList(AsyncControllerCallback<List<DeviceInfo>> callback, int timeout) {
+    connector.getDeviceList(callback,timeout);
+  }
+  
+  /**
+   * Get the specified {@link org.openremote.entities.controller.Device} from this controller
+   * @param deviceName
+   * @param callback
+   */
+  public void getDevice(String deviceName, AsyncControllerCallback<Device> callback) {
+    getDevice(deviceName, callback, timeout);
+  }
+
+  /**
+   * Get the specified {@link org.openremote.entities.controller.Device} from this controller
+   * @param deviceName
+   * @param callback
+   * @param timeout
+   */
+  public void getDevice(String deviceName, AsyncControllerCallback<Device> callback, int timeout) {
+    
+  }
+  
   /**
    * Logout from the controller (i.e. remove current credentials)
    * @param callback

@@ -18,11 +18,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.openremote.java.console.controller.connector;
+package org.openremote.console.controller.connector;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.SocketTimeoutException;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
@@ -32,13 +36,15 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClients;
+import org.openremote.console.controller.Controller;
+import org.openremote.console.controller.auth.Credentials;
 import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.ControllerResponseCode;
-import org.openremote.java.console.controller.Controller;
-import org.openremote.java.console.controller.auth.Credentials;
 
 /**
  * Test controller connector that does things synchronously for ease of testing
@@ -55,16 +61,11 @@ public class SingleThreadHttpConnector extends HttpConnector {
           .setDefaultRequestConfig(config).build();
 
   @Override
-  protected void doRequest(String url, final ControllerCallback callback, Integer timeout) {
+  protected void doRequest(String url, Map<String, String> headers, String content, final ControllerCallback callback, Integer timeout) {
     boolean doHead = false;
 
-    if (callback.command == Command.GET_RESOURCE_DETAILS) {
-      // Determine if we should load data if not do a head request
-      Object[] data = (Object[]) callback.data;
-      boolean loadData = (Boolean) data[2];
-      if (!loadData) {
-        doHead = true;
-      }
+    if (callback.command == RestCommand.GET_RESOURCE_DETAILS) {
+      doHead = true;
     }
 
     HttpUriRequest http;
@@ -75,16 +76,31 @@ public class SingleThreadHttpConnector extends HttpConnector {
               .setConnectionRequestTimeout(timeout).setConnectTimeout(timeout).build());
       http = httpHead;
     } else {
-      HttpGet httpGet = new HttpGet(url);
-      httpGet.addHeader("Accept", "application/json");
-      httpGet.setConfig(RequestConfig.custom().setSocketTimeout(timeout)
+      HttpPost httpPost = new HttpPost(url);
+      httpPost.addHeader("Accept", "application/json");
+      httpPost.setConfig(RequestConfig.custom().setSocketTimeout(timeout)
               .setConnectionRequestTimeout(timeout).setConnectTimeout(timeout).build());
-      http = httpGet;
+      if (headers != null) {
+        for (Entry<String,String> header : headers.entrySet()) {
+          httpPost.addHeader(header.getKey(), header.getValue());
+        }
+      }
+      if (content != null) {
+        try {
+          httpPost.setEntity(new StringEntity(content));
+        } catch (UnsupportedEncodingException e) {
+          callback.callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
+          return;
+        }
+      }
+      http = httpPost;
     }
 
+    HttpResponse response = null;
+    byte[] responseData = null;
+    
     try {
-      HttpResponse response = client.execute(http);
-      byte[] responseData = null;
+      response = client.execute(http);     
 
       if (response.getEntity() != null) {
         InputStream is = response.getEntity().getContent();
@@ -102,19 +118,19 @@ public class SingleThreadHttpConnector extends HttpConnector {
       // java.util.Scanner s = new java.util.Scanner(is).useDelimiter("\\A");
       // String responseStr = s.hasNext() ? s.next() : "";
 
-      if (callback.command == Command.LOGOUT) {
+      if (callback.command == RestCommand.LOGOUT) {
         creds.clear();
       }
-
-      handleResponse(callback, response.getStatusLine().getStatusCode(), response.getAllHeaders(),
-              responseData);
     } catch (Exception e) {
-      if (callback.command == Command.DO_SENSOR_POLLING && e instanceof SocketTimeoutException) {
+      if (callback.command == RestCommand.DO_SENSOR_POLLING && e instanceof SocketTimeoutException) {
         callback.callback.onSuccess(null);
-        return;
+      } else {
+        callback.callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
       }
-      callback.callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
+      return;
     }
+    handleResponse(callback, response.getStatusLine().getStatusCode(), response.getAllHeaders(),
+            responseData);
   }
 
   @Override

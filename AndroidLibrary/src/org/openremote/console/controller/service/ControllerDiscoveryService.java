@@ -18,12 +18,12 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.openremote.java.console.controller.service;
+package org.openremote.console.controller.service;
 
-import org.openremote.java.console.controller.AsyncControllerDiscoveryCallback;
-import org.openremote.java.console.controller.connector.AndroidHttpConnector;
-import org.openremote.java.console.controller.connector.ControllerConnector;
-import org.openremote.java.console.controller.connector.SingleThreadHttpConnector;
+import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
+import org.openremote.console.controller.connector.AndroidHttpConnector;
+import org.openremote.console.controller.connector.ControllerConnector;
+import org.openremote.console.controller.connector.SingleThreadHttpConnector;
 
 /**
  * Controller discovery service for asynchronously discovering controllers within

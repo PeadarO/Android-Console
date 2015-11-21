@@ -18,21 +18,31 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.openremote.java.console.controller;
+package org.openremote.console.controller;
+
+import org.openremote.entities.controller.ControllerResponseCode;
 
 /**
- * Simple exception definition for connection exceptions
+ * This connection object can be used in future to store additional information
+ * about the controller (i.e. capabilities)
+ * 
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
- *
+ * 
  */
-public class ConnectionException extends Exception {
-  private static final long serialVersionUID = 5206350896312447990L;
-  
-  ConnectionException(String message) {
-    super(message);
+public class ControllerConnectionStatus {
+  // private Controller controller;
+  private ControllerResponseCode code;
+
+  public ControllerConnectionStatus(ControllerResponseCode code) {
+    // this.controller = controller;
+    this.code = code;
   }
 
-  ConnectionException(Exception e) {
-    super(e);
+  // public Controller getController() {
+  // return controller;
+  // }
+
+  public ControllerResponseCode getCode() {
+    return code;
   }
 }

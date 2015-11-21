@@ -18,31 +18,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.openremote.java.console.controller;
-
-import org.openremote.entities.controller.ControllerResponseCode;
+package org.openremote.console.controller.auth;
 
 /**
- * This connection object can be used in future to store additional information
- * about the controller (i.e. capabilities)
- * 
+ * Simple interface for storing username and password credentials
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
- * 
+ *
  */
-public class ControllerConnectionStatus {
-  // private Controller controller;
-  private ControllerResponseCode code;
+public interface Credentials {
+  public String getUsername();
 
-  public ControllerConnectionStatus(ControllerResponseCode code) {
-    // this.controller = controller;
-    this.code = code;
-  }
-
-  // public Controller getController() {
-  // return controller;
-  // }
-
-  public ControllerResponseCode getCode() {
-    return code;
-  }
+  public String getPassword();
 }
