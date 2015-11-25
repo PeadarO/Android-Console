@@ -9,10 +9,9 @@
 	<classpathentry kind="lib" path="libs/jackson-core-2.3.2.jar"/>
 	<classpathentry kind="lib" path="libs/jackson-databind-2.3.2.jar"/>
 	<classpathentry kind="lib" path="libs/android-support-v4.jar"/>
-	<classpathentry kind="lib" path="libs/androidconsole-1.1.0.jar" sourcepath="/ORAPI/src"/>
-	<classpathentry kind="lib" path="libs/orentities-1.1.0.jar" sourcepath="/OREntities/src"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/ORAPI"/>
+	<classpathentry combineaccessrules="false" exported="true" kind="src" path="/ORAPI"/>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="gen"/>
+	<classpathentry kind="lib" path="libs/android-support-test.jar"/>
 	<classpathentry kind="output" path="bin/classes"/>
 </classpath>

@@ -21,23 +21,22 @@
 package org.openremote.console.controller.connector;
 
 import java.io.UnsupportedEncodingException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.http.Header;
+import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
 import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.console.controller.auth.Credentials;
+import org.openremote.console.controller.connector.HttpConnector.RestCommand;
 import org.openremote.entities.controller.AsyncControllerCallback;
-import org.openremote.entities.controller.Command;
-import org.openremote.entities.controller.CommandResponse;
 import org.openremote.entities.controller.ControllerResponseCode;
-import org.openremote.entities.controller.Device;
-import org.openremote.entities.controller.DeviceInfo;
 
 import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.ResponseHandlerInterface;
@@ -53,6 +52,7 @@ public class AndroidHttpConnector extends HttpConnector {
 
   public AndroidHttpConnector() {
     client.addHeader("Accept", "application/json");
+    client.setTimeout(getTimeout());
   }
 
   @Override
@@ -118,13 +118,17 @@ public class AndroidHttpConnector extends HttpConnector {
       }
 
       @Override
-      public void onFailure(int code, Throwable exception, String message) {
-        // TODO: Provide better information about failure
-        callback.callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
-      }
+      public void onFailure(int code, Throwable exception, String message) {        
+        if (callback.command == RestCommand.DO_SENSOR_POLLING && exception.getCause() instanceof ConnectTimeoutException) {
+          callback.callback.onSuccess(null);
+        } else {
+          callback.callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
+        }
+      }      
     };
     
     if (doHead) {
+      client.setTimeout(timeout);
       client.head(url, handler);
     } else {
       StringEntity entity = null;
@@ -150,6 +154,7 @@ public class AndroidHttpConnector extends HttpConnector {
         }
       }
       
+      client.setTimeout(timeout);
       client.post(null, url, headerArr, entity, "application/json", handler);
     }
   }
@@ -166,12 +171,12 @@ public class AndroidHttpConnector extends HttpConnector {
   }
   
   @Override
-  public void logout(AsyncControllerCallback<Boolean> callback, int timeout) {
+  public void logout(AsyncControllerCallback<Boolean> callback) {
     credentials = null;
     
     if (controllerUrl != null) {
       doRequest(buildRequestUrl(RestCommand.LOGOUT), null, null, new ControllerCallback(RestCommand.LOGOUT, callback),
-              timeout);
+getTimeout());
     }
     else {
       callback.onSuccess(true);

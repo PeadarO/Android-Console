@@ -29,12 +29,11 @@ import org.openremote.console.controller.ControllerConnectionStatus;
 import org.openremote.console.controller.auth.Credentials;
 import org.openremote.entities.panel.Panel;
 import org.openremote.entities.panel.PanelInfo;
-import org.openremote.entities.panel.ResourceDataResponse;
-import org.openremote.entities.panel.ResourceInfoDetails;
 import org.openremote.entities.panel.ResourceLocator;
 import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.Command;
 import org.openremote.entities.controller.CommandResponse;
+import org.openremote.entities.controller.CommandSender;
 import org.openremote.entities.controller.ControlCommand;
 import org.openremote.entities.controller.ControlCommandResponse;
 import org.openremote.entities.controller.Device;
@@ -48,7 +47,9 @@ import org.openremote.entities.controller.DeviceInfo;
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  * 
  */
-public interface ControllerConnector {
+public interface ControllerConnector extends CommandSender, ResourceLocator {
+  public static final int DEFAULT_TIMEOUT = 5000;
+  
   /**
    * Sets the controller URL
    * 
@@ -78,6 +79,18 @@ public interface ControllerConnector {
   void setCredentials(Credentials credentials);
 
   /**
+   * Set the timeout in milliseconds for this connector
+   * @param timeout
+   */
+  void setTimeout(int timeout);
+  
+  /**
+   * Get the timeout in milliseconds for this connector
+   * @return
+   */
+  int getTimeout();
+  
+  /**
    * Returns the currently active credentials
    * 
    * @return
@@ -97,13 +110,13 @@ public interface ControllerConnector {
    * method when the connection closes for some reason
    * 
    * @param callback
-   * @param timeout
-   *          Timeout in milliseconds for this command
    */
-  void connect(AsyncControllerCallback<ControllerConnectionStatus> callback, int timeout);
+  void connect(AsyncControllerCallback<ControllerConnectionStatus> callback);
 
   /**
-   * Disconnects from the controller; does nothing if not already connected
+   * Disconnects from the controller asynchronously; does nothing if not already connected.
+   * When disconnect is completed the onFailure method of the connect callback will be
+   * called with a ControllerResponseCode of {@value org.openremote.entities.controller.ControllerResponseCode.DISCONNECTED}. 
    */
   void disconnect();
 
@@ -114,10 +127,8 @@ public interface ControllerConnector {
    * @param callback
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
-   * @param timeout
-   *          Timeout in milliseconds for this command
    */
-  void getPanelList(AsyncControllerCallback<List<PanelInfo>> callback, int timeout);
+  void getPanelList(AsyncControllerCallback<List<PanelInfo>> callback);
 
   /**
    * Returns {@link org.openremote.entities.panel.Panel} definition of the
@@ -128,10 +139,8 @@ public interface ControllerConnector {
    * @param callback
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
-   * @param timeout
-   *          Timeout in milliseconds for this command
    */
-  void getPanel(String panelName, AsyncControllerCallback<Panel> callback, int timeout);
+  void getPanel(String panelName, AsyncControllerCallback<Panel> callback);
 
   /**
    * Returns {@link Boolean} indicating whether control command send request was
@@ -142,11 +151,8 @@ public interface ControllerConnector {
    * @param callback
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
-   * @param timeout
-   *          Timeout in milliseconds for this command
    */
-  void sendControlCommand(ControlCommand command, AsyncControllerCallback<ControlCommandResponse> callback,
-          int timeout);
+  void sendControlCommand(ControlCommand command, AsyncControllerCallback<ControlCommandResponse> callback);
   
   /**
    * Returns {@link Boolean} indicating whether command send request was
@@ -159,40 +165,31 @@ public interface ControllerConnector {
    * @param callback
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
-   * @param timeout
-   *          Timeout in milliseconds for this command
    */
-  void sendCommand(Command command, String parameter, AsyncControllerCallback<CommandResponse> callback,
-          int timeout);
+  void sendCommand(Command command, String parameter, AsyncControllerCallback<CommandResponse> callback);
 
   /**
    * Returns Map<Integer, String> of sensor IDs and values only for sensors
    * whose values have changed since the last request.
    * 
    * @param sensorIds
-   *          Array of sensor IDs to monitor
+   *          List of sensor IDs to monitor
    * @param callback
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
-   * @param timeout
-   *          Timeout in milliseconds for this command
    */
-  void monitorSensors(int[] sensorIds, AsyncControllerCallback<Map<Integer, String>> callback,
-          int timeout);
+  void monitorSensors(List<Integer> sensorIds, AsyncControllerCallback<Map<Integer, String>> callback);
 
   /**
    * Returns Map<Integer, String> of sensor IDs and values. *
    * 
    * @param sensorIds
-   *          Array of sensor IDs to get values for
+   *          List of sensor IDs to get values for
    * @param callback
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
-   * @param timeout
-   *          Timeout in milliseconds for this command
    */
-  void getSensorValues(int[] sensorIds, AsyncControllerCallback<Map<Integer, String>> callback,
-          int timeout);
+  void getSensorValues(List<Integer> sensorIds, AsyncControllerCallback<Map<Integer, String>> callback);
 
   /**
    * Logs out of the controller. *
@@ -200,43 +197,8 @@ public interface ControllerConnector {
    * @param callback
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
-   * @param timeout
-   *          Timeout in milliseconds for this command
    */
-  void logout(AsyncControllerCallback<Boolean> callback, int timeout);
-
-  /**
-   * Get the resource info details for the requested resource
-   * 
-   * @param resourceLocator
-   * @param resourceName
-   * @param getData
-   * @param resourceCallback
-   */
-  void getResourceInfoDetails(ResourceLocator resourceLocator, String resourceName,
-          AsyncControllerCallback<ResourceInfoDetails> resourceCallback, int timeout);
-
-  // /**
-  // * Get the resource info for the requested resources optionally retrieve the
-  // data of the resources (otherwise lazy load)
-  // * @param resourceName
-  // * @param getData
-  // * @param resourceCallback
-  // * @param timeout Timeout in milliseconds for this command
-  // */
-  // void getResources(String[] resourceName, boolean getData,
-  // AsyncControllerCallback<ResourceInfo[]> resourceCallback, int timeout);
-  //
-  /**
-   * Get the data for the requested resource
-   * 
-   * @param resourceName
-   * @param resourceDataCallback
-   * @param timeout
-   *          Timeout in milliseconds for this command
-   */
-  void getResourceData(String resourceName,
-          AsyncControllerCallback<ResourceDataResponse> resourceDataCallback, int timeout);
+  void logout(AsyncControllerCallback<Boolean> callback);
   
   /**
    * Perform controller discovery for the specified period of time using the specified TCP port
@@ -267,10 +229,28 @@ public interface ControllerConnector {
    * @param callback
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
-   * @param timeout
-   *          Timeout in milliseconds for this command
    */
-  void getDeviceList(AsyncControllerCallback<List<DeviceInfo>> callback, int timeout);
+  void getDeviceList(AsyncControllerCallback<List<DeviceInfo>> callback);
 
-  void getDevice(String deviceName, AsyncControllerCallback<Device> callback, int timeout);
+  /**
+   * Returns {@link org.openremote.entities.controller.Device} that matches
+   * the supplied device name.
+   * @param deviceName
+   * @param callback
+   */
+  void getDevice(String deviceName, AsyncControllerCallback<Device> callback);
+  
+  /**
+   * Sets whether the connector should automatically try to re-establish connection
+   * when a connection error occurs.
+   * @param autoReconnect
+   */
+  void setAutoReconnect(boolean autoReconnect);
+  
+  /**
+   * Indicates whether the connector will automatically try to re-establish connection
+   * when a connection error occurs.
+   * @return
+   */
+  boolean isAutoReconnect();
 }

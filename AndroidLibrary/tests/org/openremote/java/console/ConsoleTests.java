@@ -9,8 +9,15 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
+import org.openremote.console.controller.AsyncRegistrationCallback;
 import org.openremote.console.controller.Controller;
 import org.openremote.console.controller.ControllerConnectionStatus;
+import org.openremote.console.controller.DeviceRegistrationHandle;
+import org.openremote.console.controller.PanelRegistrationHandle;
+import org.openremote.console.controller.connector.ControllerConnector;
+import org.openremote.console.controller.connector.SingleThreadHttpConnector;
+import org.openremote.console.controller.service.ControllerDiscoveryService;
 import org.openremote.entities.panel.AbsoluteLayout;
 import org.openremote.entities.panel.ButtonWidget;
 import org.openremote.entities.panel.ColorPickerWidget;
@@ -34,11 +41,16 @@ import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.Command;
 import org.openremote.entities.controller.CommandResponse;
 import org.openremote.entities.controller.ControlCommandResponse;
+import org.openremote.entities.controller.ControllerInfo;
 import org.openremote.entities.controller.ControllerResponseCode;
 import org.openremote.entities.controller.Device;
 import org.openremote.entities.controller.DeviceInfo;
 import org.openremote.entities.controller.Sensor;
 import org.openremote.entities.controller.SensorType;
+
+import android.test.UiThreadTest;
+import android.view.MotionEvent;
+import android.view.View;
 
 /**
  * This test class provides integration testing of the console library
@@ -82,12 +94,20 @@ public class ConsoleTests {
   
   public static final String CONTROLLER_URL = "http://multimation.co.uk:8081/controller";
   private static Controller controller;
-
+  private PanelRegistrationHandle panelRegistration = null;
+  private DeviceRegistrationHandle deviceRegistration = null;
+  private static Class<?> connectorClazz = SingleThreadHttpConnector.class;
+  
+  public static void setConnectorClass(Class<?> connectorClass) {
+    connectorClazz = connectorClass;
+  }
+   
   /**
    * Setup the controller and ensure we can connect to it
    */
   @BeforeClass
   public static void connectController() {
+    Controller.setConnectorType(connectorClazz);
     controller = new Controller(CONTROLLER_URL);
 
     controller.connect(new AsyncControllerCallback<ControllerConnectionStatus>() {
@@ -102,7 +122,40 @@ public class ConsoleTests {
         Assert.fail();
         
       }
-    }, 10000);
+    });
+  }
+  
+  @Test
+  public void controllerDiscoveryTest() {
+    // Start controller discovery
+    ControllerDiscoveryService.startDiscovery(new AsyncControllerDiscoveryCallback() {
+      
+      @Override
+      public void onStartDiscoveryFailed(ControllerResponseCode arg0) {
+        System.out.println("Start Discovery Failed! " + arg0.getDescription());
+      }
+      
+      @Override
+      public void onDiscoveryStopped() {
+        System.out.println("Discovery Finished!");
+      }
+      
+      @Override
+      public void onDiscoveryStarted() {
+        System.out.println("Start Discovery!");
+      }
+      
+      @Override
+      public void onControllerFound(ControllerInfo controllerInfo) {
+        System.out.println("Controller Found!");
+        System.out.println("    URL: " + controllerInfo.getUrl());
+        System.out.println("    NAME: " + controllerInfo.getName());
+        System.out.println("    VERSION: " + controllerInfo.getVersion());
+        System.out.println("    IDENTITY: " + controllerInfo.getIdentity());
+        
+        ControllerDiscoveryService.stopDiscovery();
+      }
+    });
   }
   
   /**
@@ -402,14 +455,15 @@ public class ConsoleTests {
       
       @Override
       public void onSuccess(List<DeviceInfo> deviceList) {
-        Assert.assertNotNull(deviceList);
-        Assert.assertEquals(5, deviceList.size());
         List<String> deviceNames = Arrays.asList(new String[] {
           "SWITCH TEST",
           "BUTTON TEST",
           "SLIDER TEST",
           "COLOR TEST"
         });
+        Assert.assertNotNull(deviceList);
+        Assert.assertEquals(deviceNames.size(), deviceList.size());
+        
         for(DeviceInfo deviceInfo : deviceList) {
           Assert.assertNotNull(deviceInfo);
           Assert.assertTrue(deviceNames.indexOf(deviceInfo.getName()) >= 0);
@@ -422,7 +476,7 @@ public class ConsoleTests {
                 Assert.assertNotNull(device.getCommands());
                 Assert.assertNotNull(device.getSensors());
                 Assert.assertEquals(6, device.getCommands().size());
-                Assert.assertEquals(2, device.getCommands().size());
+                Assert.assertEquals(2, device.getSensors().size());
                 
                 for (Command command : device.getCommands()) {
                   Assert.assertNotNull(command);
@@ -482,7 +536,18 @@ public class ConsoleTests {
                   }
                 });
                 
-                controller.registerDevice(device);
+                deviceRegistration = controller.registerDevice(device, new AsyncRegistrationCallback() {
+                  
+                  @Override
+                  public void onSuccess() {
+                    System.out.println("Device Registered Successfully");
+                  }
+                  
+                  @Override
+                  public void onFailure(ControllerResponseCode error) {
+                    Assert.fail(error.getDescription());
+                  }
+                });
               }
               
               @Override
@@ -516,9 +581,10 @@ public class ConsoleTests {
    * 
    */
   @Test
+  @UiThreadTest
   public void registerPanelTest() {
     Assert.assertNotNull(controller);
-
+    
     controller.getPanel("test", new AsyncControllerCallback<Panel>() {      
       @Override
       public void onSuccess(final Panel panel) {
@@ -542,7 +608,7 @@ public class ConsoleTests {
                 final SwitchWidget sw = (SwitchWidget)widget;
                 if ("testend.1.png".equals(sw.getOnImageName()) && evt.getPropertyName().equals("state")) {
                   if (toggleCount > 0) {
-                    controller.unregisterPanel(panel);
+                    controller.unregisterPanel(panelRegistration);
                   }
                   toggleCount++;
                   return;
@@ -595,7 +661,18 @@ public class ConsoleTests {
           });
         }
         
-        controller.registerPanel(panel);
+        panelRegistration = controller.registerPanel(panel, new AsyncRegistrationCallback() {
+          
+          @Override
+          public void onSuccess() {
+            System.out.println("Panel Registered Successfully");
+          }
+          
+          @Override
+          public void onFailure(ControllerResponseCode error) {
+            Assert.fail(error.getDescription());
+          }
+        });
       }
       
       @Override

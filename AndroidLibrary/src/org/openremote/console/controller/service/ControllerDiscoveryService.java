@@ -34,8 +34,21 @@ import org.openremote.console.controller.connector.SingleThreadHttpConnector;
 public class ControllerDiscoveryService {
   public static final int DEFAULT_SEARCH_DURATION = 5000;
   public static final int DEFAULT_TCP_PORT = 2346;
-  private static final ControllerConnector connector = new SingleThreadHttpConnector();
+  private static Class<?> connectorClazz = AndroidHttpConnector.class;
+  private static ControllerConnector connector;
 //  private static final ControllerConnector connector = new AndroidHttpConnector();
+  
+  static {
+    try {
+      connector = (ControllerConnector)connectorClazz.newInstance();
+    } catch (InstantiationException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (IllegalAccessException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+  }
   
   private ControllerDiscoveryService() {
     

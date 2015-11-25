@@ -5,8 +5,10 @@ import java.beans.PropertyChangeListener;
 import java.util.List;
 
 import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
+import org.openremote.console.controller.AsyncRegistrationCallback;
 import org.openremote.console.controller.Controller;
 import org.openremote.console.controller.ControllerConnectionStatus;
+import org.openremote.console.controller.PanelRegistrationHandle;
 import org.openremote.console.controller.service.ControllerDiscoveryService;
 import org.openremote.entities.panel.ImageWidget;
 import org.openremote.entities.panel.LabelWidget;
@@ -15,9 +17,9 @@ import org.openremote.entities.panel.PanelInfo;
 import org.openremote.entities.panel.ResourceDataResponse;
 import org.openremote.entities.panel.ResourceInfo;
 import org.openremote.entities.panel.SliderWidget;
+import org.openremote.entities.panel.SwitchState;
 import org.openremote.entities.panel.SwitchWidget;
 import org.openremote.entities.panel.Widget;
-import org.openremote.entities.panel.SwitchWidget.State;
 import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.ControllerInfo;
 import org.openremote.entities.controller.ControllerResponseCode;
@@ -47,8 +49,12 @@ public class DemoActivity extends Activity {
   private static final String CONTROLLER_URL = "http://multimation.co.uk:8081/controller";
   private TextView textView;
   private Button button;
+  private Button btnDiscovery;
+  private Button btnConnect;
+  private Button btnRegister;
   private ImageView image;
   Panel currentPanel;
+  PanelRegistrationHandle panelRegistration;
   
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -58,24 +64,35 @@ public class DemoActivity extends Activity {
     button = (Button)findViewById(R.id.Switch);
     image = (ImageView)findViewById(R.id.Image);
     
-    // Setup connection callback - This will be called anytime
-    // something occurs related to the controller connection (connect, disconnect, error)
-    connectionCallback = new AsyncControllerCallback<ControllerConnectionStatus>() {
-      @Override
-      public void onSuccess(ControllerConnectionStatus result) {
-        writeLine("Connected");
-        getPanelInfo();
-      }
-      
-      @Override
-      public void onFailure(ControllerResponseCode error) {
-        // TODO: Re-act to connection failure
-        writeLine("Connection Failed!");
-      }
-    };
+    // Wire up discovery button
     
-    // Search for controllers
-    searchForControllers();
+    // Wire up discovery button
+    btnDiscovery = (Button)findViewById(R.id.BtnDiscovery);
+    btnDiscovery.setOnTouchListener(new View.OnTouchListener() {
+      @Override
+      public boolean onTouch(View v, MotionEvent event) {
+        if(!ControllerDiscoveryService.isDiscoveryRunning()) {
+          doDiscovery();        
+        }
+        return true;
+      }
+    });
+    
+    // Wire up connect button
+    btnConnect = (Button)findViewById(R.id.BtnConnect);
+    btnConnect.setOnTouchListener(new View.OnTouchListener() {
+      @Override
+      public boolean onTouch(View v, MotionEvent event) {
+        if (controller != null && !controller.isConnected()) {
+          doConnectController();
+        }
+        return true;
+      }
+    });
+    
+    // Wire up registration button
+    btnRegister = (Button)findViewById(R.id.BtnRegister);
+    updateRegistrationButton(false);
   }
 
   @Override
@@ -84,38 +101,43 @@ public class DemoActivity extends Activity {
     getMenuInflater().inflate(R.menu.demo, menu);
     return true;
   }
-
-  private void searchForControllers() {
+  
+  private void doDiscovery() {
     // Start controller discovery
     ControllerDiscoveryService.startDiscovery(new AsyncControllerDiscoveryCallback() {
       
       @Override
-      public void onStartDiscoveryFailed(ControllerResponseCode arg0) {
-        writeLine("Start Discovery Failed! " + arg0.getDescription());
+      public void onStartDiscoveryFailed(ControllerResponseCode response) {
+        writeLine("Start Discovery Failed! " + response.getDescription());
       }
       
       @Override
       public void onDiscoveryStopped() {
         writeLine("Discovery Finished!");
 
-        // Initialise the controller
-        initController();
+        btnDiscovery.setText("Loading Panel");
+        btnDiscovery.setOnTouchListener(new View.OnTouchListener() {
+          @Override
+          public boolean onTouch(View v, MotionEvent event) {
+            if(!ControllerDiscoveryService.isDiscoveryRunning()) {
+              doDiscovery();        
+            }
+            return true;
+          }
+        });
       }
       
       @Override
       public void onDiscoveryStarted() {
         writeLine("Start Discovery!");
         
-        button.setText("STOP DISCOVERY");
+        btnDiscovery.setText("STOP DISCOVERY");
         
-        button.setOnTouchListener(new View.OnTouchListener() {
+        btnDiscovery.setOnTouchListener(new View.OnTouchListener() {
           @Override
           public boolean onTouch(View v, MotionEvent event) {
-            if(event.getAction() == MotionEvent.ACTION_DOWN) {
+            if (ControllerDiscoveryService.isDiscoveryRunning()) {
               ControllerDiscoveryService.stopDiscovery();
-              button.setText("SWITCH");
-            } else if (event.getAction() == MotionEvent.ACTION_UP) {
-              // Do nothing here for switch
             }
             return true;
           }
@@ -124,28 +146,130 @@ public class DemoActivity extends Activity {
       
       @Override
       public void onControllerFound(ControllerInfo controllerInfo) {
-        writeLine("Controller Found!");
-        writeLine("    URL: " + controllerInfo.getUrl());
-        writeLine("    NAME: " + controllerInfo.getName());
-        writeLine("    VERSION: " + controllerInfo.getVersion());
-        writeLine("    IDENTITY: " + controllerInfo.getIdentity());
+        writeLine("Controller Found '" + controllerInfo.getUrl() + "'");
       }
     });
   }
   
-  private void initController() {
+  private void doConnectController() {
     // Create controller instance using URL
     controller = new Controller(CONTROLLER_URL);
-    
-    // Set load resource data to true (rather than lazy loading) if caching
-    // images then this should be false and then you can compare modified times
-    // before retrieving the resource data
-    controller.setLoadResourceData(true);
 
-    writeLine("Connecting...");
+    writeLine("Connecting to '" + CONTROLLER_URL + "'");
     
     // Connect to the controller and use specified callback
-    controller.connect(connectionCallback);
+    controller.connect(new AsyncControllerCallback<ControllerConnectionStatus>() {
+      @Override
+      public void onSuccess(ControllerConnectionStatus result) {
+        writeLine("Connected");
+        btnConnect.setText("DISCONNECT CONTROLLER");
+        if (currentPanel == null) {
+          getPanelInfo();
+        }
+      }
+      
+      @Override
+      public void onFailure(ControllerResponseCode error) {
+        // TODO: Re-act to connection failure
+        writeLine("Connection Failed!");
+      }
+    });
+  }
+  
+  private void doPanelRegistration() {
+    // Register the panel to start receiving property change notifications
+    panelRegistration = controller.registerPanel(currentPanel, new AsyncRegistrationCallback() {
+      
+      @Override
+      public void onSuccess() {
+        updateRegistrationButton(true);
+        writeLine("Panel Registration successful");
+      }
+      
+      @Override
+      public void onFailure(ControllerResponseCode error) {
+        if (error == ControllerResponseCode.UNREGISTERED) {
+          writeLine("Panel Unregistered successfully!");
+          updateRegistrationButton(false);
+        } else {
+          writeLine("Panel Registration error: " + error.getDescription());
+        }
+      }
+    });
+  }
+  
+  private void updateRegistrationButton(boolean registered) {
+    if (registered) {
+      btnRegister.setText("UNREGISTER PANEL");
+      btnRegister.setOnTouchListener(new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+          if (panelRegistration != null) {
+            controller.unregisterPanel(panelRegistration);
+            panelRegistration = null;
+            btnRegister.setText("REGISTER PANEL");
+            btnRegister.setOnTouchListener(new View.OnTouchListener() {
+              @Override
+              public boolean onTouch(View v, MotionEvent event) {
+                if (panelRegistration == null && currentPanel != null) {
+                  doPanelRegistration();          
+                }          
+                return true;
+              }
+            });
+          }          
+          return true;
+        }
+      });
+    } else {
+      btnRegister.setText("REGISTER PANEL");
+      btnRegister.setOnTouchListener(new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+          if (panelRegistration == null && currentPanel != null) {
+            doPanelRegistration();          
+          }          
+          return true;
+        }
+      });
+    }    
+  }
+  
+  private void updateDiscoveryButton(boolean discoveryRunning) {
+    if (discoveryRunning) {
+      btnRegister.setText("UNREGISTER PANEL");
+      btnRegister.setOnTouchListener(new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+          if (panelRegistration != null) {
+            controller.unregisterPanel(panelRegistration);
+            panelRegistration = null;
+            btnRegister.setText("REGISTER PANEL");
+            btnRegister.setOnTouchListener(new View.OnTouchListener() {
+              @Override
+              public boolean onTouch(View v, MotionEvent event) {
+                if (panelRegistration == null && currentPanel != null) {
+                  doPanelRegistration();          
+                }          
+                return true;
+              }
+            });
+          }          
+          return true;
+        }
+      });
+    } else {
+      btnRegister.setText("REGISTER PANEL");
+      btnRegister.setOnTouchListener(new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+          if (panelRegistration == null && currentPanel != null) {
+            doPanelRegistration();          
+          }          
+          return true;
+        }
+      });
+    }    
   }
   
   private void getPanelInfo() {
@@ -157,7 +281,7 @@ public class DemoActivity extends Activity {
         for (PanelInfo info : result) {
           writeLine("       " + info.getName());
         }        
-        registerPanel();
+        getPanel();
       }
       
       @Override
@@ -167,11 +291,11 @@ public class DemoActivity extends Activity {
     });
   }
   
-  private void registerPanel() {
+  private void getPanel() {
     writeLine("Getting Panel Test:");
     controller.getPanel("test", new AsyncControllerCallback<Panel>() {      
       @Override
-      public void onSuccess(Panel result) {
+      public void onSuccess(final Panel result) {
         final Panel panel = result;
         currentPanel = panel;
         writeLine("Panel received");
@@ -189,10 +313,12 @@ public class DemoActivity extends Activity {
                 writeLine("Switch Widget Changed: " + evt.getPropertyName());
                 
                 // Update the text of the switch in the demo view to match the switch state
-                // There's only one switch in this demo panel
-                if (evt.getPropertyName().equals("state")) {
-                  State state = (State)evt.getNewValue();
-                  button.setText(state.toString());
+                // of the first switch
+                if (evt.getSource() == result.getWidgets(SwitchWidget.class).get(0)) {
+                  if (evt.getPropertyName().equals("state")) {
+                    SwitchState state = (SwitchState)evt.getNewValue();
+                    button.setText(state.toString());
+                  }
                 }
                 
 //                List<String> props = Arrays.asList(new String[] {"state","onImage","offImage"});
@@ -230,7 +356,7 @@ public class DemoActivity extends Activity {
                   // Look at modified date and compare to cached image (if we have a cached image otherwise let's load the data)
                   // if cached image is up to date then use that otherwise call getResourceData - if setLoadResourceData = true
                   // then data would have automatically been populated and getResourceData will return immediately with the answer
-                  resource.getResourceData(new AsyncControllerCallback<ResourceDataResponse>() {
+                  resource.getData(new AsyncControllerCallback<ResourceDataResponse>() {
 
                     @Override
                     public void onFailure(ControllerResponseCode arg0) {
@@ -247,9 +373,6 @@ public class DemoActivity extends Activity {
             }
           });
         }
-        
-        // Register the panel to start receiving property change notifications
-        controller.registerPanel(result);
         
         wireupSwitchHandler();
       }
@@ -269,7 +392,7 @@ public class DemoActivity extends Activity {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 if(event.getAction() == MotionEvent.ACTION_DOWN) {
-                  testSwitch.setState(testSwitch.getState() == State.ON ? State.OFF : State.ON);
+                  testSwitch.setState(testSwitch.getState() == SwitchState.ON ? SwitchState.OFF : SwitchState.ON);
                 } else if (event.getAction() == MotionEvent.ACTION_UP) {
                   // Do nothing here for switch
                 }

@@ -24,9 +24,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.SocketTimeoutException;
+import java.net.URI;
+import java.net.URL;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
@@ -34,14 +35,12 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClients;
-import org.openremote.console.controller.Controller;
 import org.openremote.console.controller.auth.Credentials;
 import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.ControllerResponseCode;
@@ -53,9 +52,9 @@ import org.openremote.entities.controller.ControllerResponseCode;
  */
 public class SingleThreadHttpConnector extends HttpConnector {
   private final RequestConfig config = RequestConfig.custom()
-          .setSocketTimeout(Controller.DEFAULT_TIMEOUT)
-          .setConnectionRequestTimeout(Controller.DEFAULT_TIMEOUT)
-          .setConnectTimeout(Controller.DEFAULT_TIMEOUT).build();
+          .setSocketTimeout(getTimeout())
+          .setConnectionRequestTimeout(getTimeout())
+          .setConnectTimeout(getTimeout()).build();
   private final CredentialsProvider creds = new BasicCredentialsProvider();
   private final HttpClient client = HttpClients.custom().setDefaultCredentialsProvider(creds)
           .setDefaultRequestConfig(config).build();
@@ -63,7 +62,15 @@ public class SingleThreadHttpConnector extends HttpConnector {
   @Override
   protected void doRequest(String url, Map<String, String> headers, String content, final ControllerCallback callback, Integer timeout) {
     boolean doHead = false;
-
+    URI uri;
+    try {
+      URL urlObject = new URL(url);
+      uri = new URI(urlObject.getProtocol(), urlObject.getUserInfo(), urlObject.getHost(), urlObject.getPort(), urlObject.getPath(), urlObject.getQuery(), urlObject.getRef());
+    } catch (Exception e) {
+      callback.callback.onFailure(ControllerResponseCode.INVALID_URL);
+      return;
+    }
+    
     if (callback.command == RestCommand.GET_RESOURCE_DETAILS) {
       doHead = true;
     }
@@ -71,12 +78,12 @@ public class SingleThreadHttpConnector extends HttpConnector {
     HttpUriRequest http;
 
     if (doHead) {
-      HttpHead httpHead = new HttpHead(url);
+      HttpHead httpHead = new HttpHead(uri);
       httpHead.setConfig(RequestConfig.custom().setSocketTimeout(timeout)
               .setConnectionRequestTimeout(timeout).setConnectTimeout(timeout).build());
       http = httpHead;
     } else {
-      HttpPost httpPost = new HttpPost(url);
+      HttpPost httpPost = new HttpPost(uri);
       httpPost.addHeader("Accept", "application/json");
       httpPost.setConfig(RequestConfig.custom().setSocketTimeout(timeout)
               .setConnectionRequestTimeout(timeout).setConnectTimeout(timeout).build());
@@ -129,8 +136,8 @@ public class SingleThreadHttpConnector extends HttpConnector {
       }
       return;
     }
-    handleResponse(callback, response.getStatusLine().getStatusCode(), response.getAllHeaders(),
-            responseData);
+    
+    handleResponse(callback, response.getStatusLine().getStatusCode(), response.getAllHeaders(), responseData);
   }
 
   @Override
@@ -143,7 +150,7 @@ public class SingleThreadHttpConnector extends HttpConnector {
   }
 
   @Override
-  public void logout(AsyncControllerCallback<Boolean> callback, int timeout) {
+  public void logout(AsyncControllerCallback<Boolean> callback) {
     creds.clear();
   }
 
