@@ -1,0 +1,7 @@
+org.openremote.console.controller
+org.openremote.console.controller.auth
+org.openremote.console.controller.connector
+org.openremote.console.controller.service
+org.openremote.entities.controller
+org.openremote.entities.panel
+org.openremote.entities.util
