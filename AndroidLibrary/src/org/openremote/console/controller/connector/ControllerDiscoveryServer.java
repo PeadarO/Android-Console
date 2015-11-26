@@ -55,50 +55,55 @@ class ControllerDiscoveryServer extends Thread {
     try {
       receiver = new ControllerDiscoveryReceiver(responseHandler, tcpPort);
       receiver.start();
+    
+      // Notify start
+      responseHandler.sendStartMessage();
+    
+      // Start the multicast   
+      while(!cancelled) {
+        // Send UDP packet at increasing time interval up to 60s
+        if (elapsedTime % pauseTime == 0) {
+          try {        
+            DatagramSocket socket = new DatagramSocket();
+            byte[] b = new byte[512];
+            DatagramPacket dgram;
+            dgram = new DatagramPacket(b, b.length, InetAddress.getByName(MULTICAST_ADDRESS), MULTICAST_PORT);
+            socket.send(dgram);
+            socket.close();
+          } catch (Exception e) {
+          }
+          if (pauseTime < 60000) {
+            pauseTime *= 2;
+          }
+        }
+        
+        elapsedTime += 1000;
+        
+        if (duration != null && elapsedTime > duration) {
+          break;
+        }
+        
+        // Sleep
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          cancelled = true;
+        }
+      }
+      
+      // Notify finish
+      responseHandler.sendFinishMessage();
+    
     } catch (IOException e) {
       // Notify start failure 
       responseHandler.sendFailureMessage(0, null, null, e);
       return;
-    } 
-    
-    // Notify start
-    responseHandler.sendStartMessage();
-    
-    // Start the multicast   
-    while(!cancelled) {
-      if (elapsedTime % pauseTime == 0) {
-        try {        
-          DatagramSocket socket = new DatagramSocket();
-          byte[] b = new byte[512];
-          DatagramPacket dgram;
-          dgram = new DatagramPacket(b, b.length, InetAddress.getByName(MULTICAST_ADDRESS), MULTICAST_PORT);
-          socket.send(dgram);
-        } catch (Exception e) {
-        }
-        if (pauseTime < 60000) {
-          pauseTime *= 2;
-        }
-      }
-      
-      elapsedTime += 1000;
-      
-      if (duration != null && elapsedTime > duration) {
-        break;
-      }
-      
-      // Sleep
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-        cancelled = true;
+    } finally {
+      if (receiver != null) {
+        // Stop the receiver
+        receiver.cancel();
       }
     }
-    
-    // Stop the receiver
-    receiver.cancel();
-    
-    // Notify finish
-    responseHandler.sendFinishMessage();
   }
   
   void cancel() {

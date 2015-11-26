@@ -8,6 +8,7 @@ import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.console.controller.AsyncRegistrationCallback;
 import org.openremote.console.controller.Controller;
 import org.openremote.console.controller.ControllerConnectionStatus;
+import org.openremote.console.controller.DeviceRegistrationHandle;
 import org.openremote.console.controller.PanelRegistrationHandle;
 import org.openremote.console.controller.service.ControllerDiscoveryService;
 import org.openremote.entities.panel.ImageWidget;
@@ -21,8 +22,12 @@ import org.openremote.entities.panel.SwitchState;
 import org.openremote.entities.panel.SwitchWidget;
 import org.openremote.entities.panel.Widget;
 import org.openremote.entities.controller.AsyncControllerCallback;
+import org.openremote.entities.controller.Command;
+import org.openremote.entities.controller.CommandResponse;
 import org.openremote.entities.controller.ControllerInfo;
 import org.openremote.entities.controller.ControllerResponseCode;
+import org.openremote.entities.controller.Device;
+import org.openremote.entities.controller.Sensor;
 
 import android.os.Bundle;
 import android.app.Activity;
@@ -44,17 +49,20 @@ public class DemoActivity extends Activity {
     }
   }
   
-  private Controller controller;
-  private AsyncControllerCallback<ControllerConnectionStatus> connectionCallback;
   private static final String CONTROLLER_URL = "http://multimation.co.uk:8081/controller";
+  private Controller controller = new Controller(CONTROLLER_URL);
   private TextView textView;
   private Button button;
   private Button btnDiscovery;
   private Button btnConnect;
   private Button btnRegister;
+  private Button btnDevice;
   private ImageView image;
-  Panel currentPanel;
-  PanelRegistrationHandle panelRegistration;
+  private Panel currentPanel;
+  private PanelRegistrationHandle panelRegistration;
+  private DeviceRegistrationHandle deviceRegistration;
+  private Device currentDevice;
+  private SwitchWidget switchWidget = null;
   
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -64,35 +72,23 @@ public class DemoActivity extends Activity {
     button = (Button)findViewById(R.id.Switch);
     image = (ImageView)findViewById(R.id.Image);
     
-    // Wire up discovery button
     
     // Wire up discovery button
     btnDiscovery = (Button)findViewById(R.id.BtnDiscovery);
-    btnDiscovery.setOnTouchListener(new View.OnTouchListener() {
-      @Override
-      public boolean onTouch(View v, MotionEvent event) {
-        if(!ControllerDiscoveryService.isDiscoveryRunning()) {
-          doDiscovery();        
-        }
-        return true;
-      }
-    });
+    updateDiscoveryButton(false);
     
     // Wire up connect button
     btnConnect = (Button)findViewById(R.id.BtnConnect);
-    btnConnect.setOnTouchListener(new View.OnTouchListener() {
-      @Override
-      public boolean onTouch(View v, MotionEvent event) {
-        if (controller != null && !controller.isConnected()) {
-          doConnectController();
-        }
-        return true;
-      }
-    });
+    updateConnectButton(false);
     
     // Wire up registration button
     btnRegister = (Button)findViewById(R.id.BtnRegister);
     updateRegistrationButton(false);
+    
+    // Wire up device button
+    btnDevice = (Button)findViewById(R.id.BtnDevice);
+    updateDeviceButton(false);
+    updateDeviceSendButtons();
   }
 
   @Override
@@ -114,34 +110,13 @@ public class DemoActivity extends Activity {
       @Override
       public void onDiscoveryStopped() {
         writeLine("Discovery Finished!");
-
-        btnDiscovery.setText("Loading Panel");
-        btnDiscovery.setOnTouchListener(new View.OnTouchListener() {
-          @Override
-          public boolean onTouch(View v, MotionEvent event) {
-            if(!ControllerDiscoveryService.isDiscoveryRunning()) {
-              doDiscovery();        
-            }
-            return true;
-          }
-        });
+        updateDiscoveryButton(false);
       }
       
       @Override
       public void onDiscoveryStarted() {
         writeLine("Start Discovery!");
-        
-        btnDiscovery.setText("STOP DISCOVERY");
-        
-        btnDiscovery.setOnTouchListener(new View.OnTouchListener() {
-          @Override
-          public boolean onTouch(View v, MotionEvent event) {
-            if (ControllerDiscoveryService.isDiscoveryRunning()) {
-              ControllerDiscoveryService.stopDiscovery();
-            }
-            return true;
-          }
-        });
+        updateDiscoveryButton(true);
       }
       
       @Override
@@ -152,9 +127,6 @@ public class DemoActivity extends Activity {
   }
   
   private void doConnectController() {
-    // Create controller instance using URL
-    controller = new Controller(CONTROLLER_URL);
-
     writeLine("Connecting to '" + CONTROLLER_URL + "'");
     
     // Connect to the controller and use specified callback
@@ -162,117 +134,29 @@ public class DemoActivity extends Activity {
       @Override
       public void onSuccess(ControllerConnectionStatus result) {
         writeLine("Connected");
-        btnConnect.setText("DISCONNECT CONTROLLER");
-        if (currentPanel == null) {
-          getPanelInfo();
-        }
+        updateConnectButton(true);
+        doGetPanelInfo();
+        doGetDevice();
       }
       
       @Override
       public void onFailure(ControllerResponseCode error) {
-        // TODO: Re-act to connection failure
-        writeLine("Connection Failed!");
-      }
-    });
-  }
-  
-  private void doPanelRegistration() {
-    // Register the panel to start receiving property change notifications
-    panelRegistration = controller.registerPanel(currentPanel, new AsyncRegistrationCallback() {
-      
-      @Override
-      public void onSuccess() {
-        updateRegistrationButton(true);
-        writeLine("Panel Registration successful");
-      }
-      
-      @Override
-      public void onFailure(ControllerResponseCode error) {
-        if (error == ControllerResponseCode.UNREGISTERED) {
-          writeLine("Panel Unregistered successfully!");
-          updateRegistrationButton(false);
+        if (error == ControllerResponseCode.DISCONNECTED) {
+          writeLine("Disconnected");
+          updateConnectButton(false);
         } else {
-          writeLine("Panel Registration error: " + error.getDescription());
+          // TODO: Re-act to connection failure
+          writeLine("Connection Failed!");
         }
       }
     });
-  }
+  } 
   
-  private void updateRegistrationButton(boolean registered) {
-    if (registered) {
-      btnRegister.setText("UNREGISTER PANEL");
-      btnRegister.setOnTouchListener(new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View v, MotionEvent event) {
-          if (panelRegistration != null) {
-            controller.unregisterPanel(panelRegistration);
-            panelRegistration = null;
-            btnRegister.setText("REGISTER PANEL");
-            btnRegister.setOnTouchListener(new View.OnTouchListener() {
-              @Override
-              public boolean onTouch(View v, MotionEvent event) {
-                if (panelRegistration == null && currentPanel != null) {
-                  doPanelRegistration();          
-                }          
-                return true;
-              }
-            });
-          }          
-          return true;
-        }
-      });
-    } else {
-      btnRegister.setText("REGISTER PANEL");
-      btnRegister.setOnTouchListener(new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View v, MotionEvent event) {
-          if (panelRegistration == null && currentPanel != null) {
-            doPanelRegistration();          
-          }          
-          return true;
-        }
-      });
-    }    
-  }
-  
-  private void updateDiscoveryButton(boolean discoveryRunning) {
-    if (discoveryRunning) {
-      btnRegister.setText("UNREGISTER PANEL");
-      btnRegister.setOnTouchListener(new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View v, MotionEvent event) {
-          if (panelRegistration != null) {
-            controller.unregisterPanel(panelRegistration);
-            panelRegistration = null;
-            btnRegister.setText("REGISTER PANEL");
-            btnRegister.setOnTouchListener(new View.OnTouchListener() {
-              @Override
-              public boolean onTouch(View v, MotionEvent event) {
-                if (panelRegistration == null && currentPanel != null) {
-                  doPanelRegistration();          
-                }          
-                return true;
-              }
-            });
-          }          
-          return true;
-        }
-      });
-    } else {
-      btnRegister.setText("REGISTER PANEL");
-      btnRegister.setOnTouchListener(new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View v, MotionEvent event) {
-          if (panelRegistration == null && currentPanel != null) {
-            doPanelRegistration();          
-          }          
-          return true;
-        }
-      });
-    }    
-  }
-  
-  private void getPanelInfo() {
+  private void doGetPanelInfo() {
+    if (currentPanel != null) {
+      return;
+    }
+    
     writeLine("Getting Panel List:");
     controller.getPanelList(new AsyncControllerCallback<List<PanelInfo>>() {
       @Override
@@ -281,7 +165,7 @@ public class DemoActivity extends Activity {
         for (PanelInfo info : result) {
           writeLine("       " + info.getName());
         }        
-        getPanel();
+        doGetPanel();
       }
       
       @Override
@@ -291,7 +175,7 @@ public class DemoActivity extends Activity {
     });
   }
   
-  private void getPanel() {
+  private void doGetPanel() {
     writeLine("Getting Panel Test:");
     controller.getPanel("test", new AsyncControllerCallback<Panel>() {      
       @Override
@@ -373,38 +257,93 @@ public class DemoActivity extends Activity {
             }
           });
         }
-        
-        wireupSwitchHandler();
-      }
-      
-      private void wireupSwitchHandler() {
-        // Find switch widget 
-        if (currentPanel == null) {
-          return;
-        }
-        
-        List<SwitchWidget> switches = currentPanel.getWidgets(SwitchWidget.class);
-        if (switches.size() > 0) {
-          final SwitchWidget testSwitch = switches.get(0);
-          
-          // Listen for click on button
-          button.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if(event.getAction() == MotionEvent.ACTION_DOWN) {
-                  testSwitch.setState(testSwitch.getState() == SwitchState.ON ? SwitchState.OFF : SwitchState.ON);
-                } else if (event.getAction() == MotionEvent.ACTION_UP) {
-                  // Do nothing here for switch
-                }
-                return true;
-            }
-          });
-        }
       }
       
       @Override
       public void onFailure(ControllerResponseCode error) {
         writeLine("Failed to get Panel");
+      }
+    });
+  }
+  
+  private void doGetDevice() {
+    if (currentDevice != null) {
+      return;
+    }
+    
+    writeLine("Getting Device Switch Test:");
+    controller.getDevice("SWITCH TEST", new AsyncControllerCallback<Device>() {
+      
+      @Override
+      public void onSuccess(final Device result) {
+        currentDevice = result;
+        writeLine("Device received");
+        
+        List<Sensor> sensors = currentDevice.getSensors();
+        if (sensors != null) {
+          for (Sensor sensor : sensors) {
+            sensor.addPropertyChangeListener(new PropertyChangeListener() {
+              
+              @Override
+              public void propertyChange(PropertyChangeEvent evt) {
+                writeLine("Sensor Value Changed from '" + evt.getOldValue() + "' to '" + evt.getNewValue());
+              }
+            });
+          }
+        }
+      }
+      
+      @Override
+      public void onFailure(ControllerResponseCode error) {
+        writeLine("Failed to get Device");        
+      }
+    });
+  }
+  
+  private void doRegisterPanel() {
+    // Register the panel to start receiving property change notifications
+    panelRegistration = controller.registerPanel(currentPanel, new AsyncRegistrationCallback() {
+      
+      @Override
+      public void onSuccess() {
+        writeLine("Panel Registration successful");
+        updateRegistrationButton(true);
+        updateSwitchButton(true);
+      }
+      
+      @Override
+      public void onFailure(ControllerResponseCode error) {
+        if (error == ControllerResponseCode.UNREGISTERED) {
+          writeLine("Panel Unregistered successfully!");
+          panelRegistration = null;
+          updateRegistrationButton(false);
+          updateSwitchButton(false);
+        } else {
+          writeLine("Panel Registration error: " + error.getDescription());
+        }
+      }
+    });
+  }
+  
+  private void doRegisterDevice() {
+    // Register the device to start receiving property change notifications
+    deviceRegistration = controller.registerDevice(currentDevice, new AsyncRegistrationCallback() {
+      
+      @Override
+      public void onSuccess() {
+        writeLine("Device Registration successful");
+        updateDeviceButton(true);
+      }
+      
+      @Override
+      public void onFailure(ControllerResponseCode error) {
+        if (error == ControllerResponseCode.UNREGISTERED) {
+          writeLine("Device Unregistered successfully!");
+          deviceRegistration = null;
+          updateDeviceButton(false);
+        } else {
+          writeLine("Device Registration error: " + error.getDescription());
+        }
       }
     });
   }
@@ -417,4 +356,203 @@ public class DemoActivity extends Activity {
   private void writeLine(String text) {
     textView.append(text + "\n");
   }
+  
+ private void updateConnectButton(boolean connected) {
+   if (connected) {
+     btnConnect.setText("DISCONNECT CONTROLLER");
+     btnConnect.setOnTouchListener(new View.OnTouchListener() {
+       @Override
+       public boolean onTouch(View v, MotionEvent event) {
+         if (event.getAction() != MotionEvent.ACTION_UP) { return true; }
+         if (controller != null && controller.isConnected()) {
+           btnConnect.setOnTouchListener(null); // Prevent multiple fires
+           controller.disconnect();
+         }          
+         return true;
+       }
+     });
+   } else {
+     btnConnect.setText("CONNECT CONTROLLER");
+     btnConnect.setOnTouchListener(new View.OnTouchListener() {
+       @Override
+       public boolean onTouch(View v, MotionEvent event) {
+         if (event.getAction() != MotionEvent.ACTION_UP) { return true; }
+         if (controller == null || !controller.isConnected()) {
+           btnConnect.setOnTouchListener(null); // Prevent multiple fires
+           doConnectController();
+         }
+         return true;
+       }
+     });
+   }    
+ }
+ 
+ private void updateRegistrationButton(boolean registered) {
+   if (registered) {
+     btnRegister.setText("UNREGISTER PANEL");
+     btnRegister.setOnTouchListener(new View.OnTouchListener() {
+       @Override
+       public boolean onTouch(View v, MotionEvent event) {
+         if (event.getAction() != MotionEvent.ACTION_UP) { return true; }
+         if (panelRegistration != null) {
+           btnRegister.setOnTouchListener(null); // Prevent multiple fires
+           controller.unregisterPanel(panelRegistration);
+         }          
+         return true;
+       }
+     });
+   } else {
+     btnRegister.setText("REGISTER PANEL");
+     btnRegister.setOnTouchListener(new View.OnTouchListener() {
+       @Override
+       public boolean onTouch(View v, MotionEvent event) {
+         if (event.getAction() != MotionEvent.ACTION_UP) { return true; }
+         if (panelRegistration == null && currentPanel != null) {
+           btnRegister.setOnTouchListener(null); // Prevent multiple fires
+           doRegisterPanel();
+         }          
+         return true;
+       }
+     });
+   }    
+ }
+ 
+ private void updateDeviceButton(boolean registered) {
+   if (registered) {
+     btnDevice.setText("UNREGISTER DEVICE");
+     btnDevice.setOnTouchListener(new View.OnTouchListener() {
+       @Override
+       public boolean onTouch(View v, MotionEvent event) {
+         if (event.getAction() != MotionEvent.ACTION_UP) { return true; }
+         if (deviceRegistration != null) {
+           btnDevice.setOnTouchListener(null); // Prevent multiple fires
+           controller.unregisterDevice(deviceRegistration);
+         }          
+         return true;
+       }
+     });
+   } else {
+     btnDevice.setText("REGISTER DEVICE");
+     btnDevice.setOnTouchListener(new View.OnTouchListener() {
+       @Override
+       public boolean onTouch(View v, MotionEvent event) {
+         if (event.getAction() != MotionEvent.ACTION_UP) { return true; }
+         if (deviceRegistration == null && currentDevice != null) {
+           btnDevice.setOnTouchListener(null); // Prevent multiple fires
+           doRegisterDevice();
+         }          
+         return true;
+       }
+     });
+   }    
+ }
+ 
+ private void updateDiscoveryButton(boolean discoveryRunning) {
+   if (discoveryRunning) {
+     btnDiscovery.setText("STOP DISCOVERY");
+     btnDiscovery.setOnTouchListener(new View.OnTouchListener() {
+       @Override
+       public boolean onTouch(View v, MotionEvent event) {
+         if (event.getAction() != MotionEvent.ACTION_UP) { return true; }
+         if (ControllerDiscoveryService.isDiscoveryRunning()) {
+           btnDiscovery.setOnTouchListener(null); // Prevent multiple fires
+           ControllerDiscoveryService.stopDiscovery();
+         }
+         return true;
+       }
+     });
+   } else {
+     btnDiscovery.setText("START DISCOVERY");
+     btnDiscovery.setOnTouchListener(new View.OnTouchListener() {
+       @Override
+       public boolean onTouch(View v, MotionEvent event) {
+         if (event.getAction() != MotionEvent.ACTION_UP) { return true; }
+         if(!ControllerDiscoveryService.isDiscoveryRunning()) {
+           btnDiscovery.setOnTouchListener(null); // Prevent multiple fires
+           doDiscovery();
+         }
+         return true;
+       }
+     });
+   }    
+ }
+ 
+ private void updateSwitchButton(boolean panelRegistered) {
+   if (panelRegistered) {
+       List<SwitchWidget> switches = currentPanel.getWidgets(SwitchWidget.class);
+       if (switches.size() > 0) {
+         switchWidget = switches.get(0);
+       }
+       
+       button.setText(switchWidget.getState().toString());       
+       button.setOnTouchListener(new View.OnTouchListener() {
+         @Override
+         public boolean onTouch(View v, MotionEvent event) {
+           if(event.getAction() == MotionEvent.ACTION_DOWN && switchWidget != null) {
+             switchWidget.setState(switchWidget.getState() == SwitchState.ON ? SwitchState.OFF : SwitchState.ON);
+           }
+           return true;
+         }
+       });
+   } else {
+     switchWidget = null;
+     button.setText("SWITCH N/A");       
+     button.setOnTouchListener(null);
+   }
+ }
+ 
+ private void updateDeviceSendButtons() {
+   Button onBtn = (Button)findViewById(R.id.BtnDeviceOn);
+   Button offBtn = (Button)findViewById(R.id.BtnDeviceOff);
+   
+   onBtn.setOnTouchListener(new View.OnTouchListener() {
+     @Override
+     public boolean onTouch(View v, MotionEvent event) {
+       if(event.getAction() == MotionEvent.ACTION_DOWN && currentDevice != null) {
+         Command cmd = currentDevice.findCommandByName("SWITCH ON");
+         if (cmd != null) {
+           currentDevice.sendCommand(cmd, new AsyncControllerCallback<CommandResponse>() {
+
+            @Override
+            public void onFailure(ControllerResponseCode error) {
+              writeLine("Failed to send command '" + error.getDescription() + "'");
+            }
+
+            @Override
+            public void onSuccess(CommandResponse result) {
+              writeLine("Command Sent");
+            }
+             
+           });
+         }
+       }
+       return true;
+     }
+   });
+   
+   offBtn.setOnTouchListener(new View.OnTouchListener() {
+     @Override
+     public boolean onTouch(View v, MotionEvent event) {
+       if(event.getAction() == MotionEvent.ACTION_DOWN && currentDevice != null) {
+         Command cmd = currentDevice.findCommandByName("SWITCH OFF");
+         if (cmd != null) {
+           currentDevice.sendCommand(cmd, new AsyncControllerCallback<CommandResponse>() {
+
+            @Override
+            public void onFailure(ControllerResponseCode error) {
+              writeLine("Failed to send command '" + error.getDescription() + "'");
+            }
+
+            @Override
+            public void onSuccess(CommandResponse result) {
+              writeLine("Command Sent");
+            }
+             
+           });
+         }
+       }
+       return true;
+     }
+   });
+ }
 }

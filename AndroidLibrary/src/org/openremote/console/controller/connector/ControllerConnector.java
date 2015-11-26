@@ -23,6 +23,7 @@ package org.openremote.console.controller.connector;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.console.controller.ControllerConnectionStatus;
@@ -172,13 +173,15 @@ public interface ControllerConnector extends CommandSender, ResourceLocator {
    * Returns Map<Integer, String> of sensor IDs and values only for sensors
    * whose values have changed since the last request.
    * 
+   * @param uuid
+   *          Unique identifier for this monitor request to allow tracking between sensor polls
    * @param sensorIds
    *          List of sensor IDs to monitor
    * @param callback
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
    */
-  void monitorSensors(List<Integer> sensorIds, AsyncControllerCallback<Map<Integer, String>> callback);
+  void monitorSensors(String uuid, List<Integer> sensorIds, AsyncControllerCallback<Map<Integer, String>> callback);
 
   /**
    * Returns Map<Integer, String> of sensor IDs and values. *

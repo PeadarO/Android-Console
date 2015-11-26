@@ -29,7 +29,7 @@
 	            android:layout_gravity="fill_vertical|fill_horizontal"
 	            android:layout_weight="4"
 	            android:text="START DISCOVERY"
-	            android:textSize="12sp" />
+	            android:textSize="9sp" />
 	
 	        <Button
 	            android:id="@+id/BtnConnect"
@@ -38,7 +38,7 @@
 	            android:layout_gravity="fill_vertical|fill_horizontal"
 	            android:layout_weight="5"
 	            android:text="CONNECT CONTROLLER"
-	            android:textSize="12sp" />
+	            android:textSize="9sp" />
 	
 	        <Button
 	            android:id="@+id/BtnRegister"
@@ -47,7 +47,15 @@
 	            android:layout_gravity="fill_vertical|fill_horizontal"
 	            android:layout_weight="4"
 	            android:text="REGISTER PANEL"
-	            android:textSize="12sp" />
+	            android:textSize="9sp" />
+
+	        <Button
+	            android:id="@+id/BtnDevice"
+	            android:layout_width="0dp"
+	            android:layout_height="match_parent"
+	            android:layout_weight="4"
+	            android:text="REGISTER DEVICE"
+	            android:textSize="9sp" />
 
 		</TableRow>
     </TableLayout>
@@ -57,7 +65,22 @@
         android:layout_width="150dp"
         android:layout_height="40dp"
         android:layout_below="@id/TableLayout"
-        android:text="SWITCH" />
+        android:text="SWITCH N/A" />
+
+    <Button
+        android:id="@+id/BtnDeviceOn"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:layout_below="@id/Switch"
+        android:text="DEVICE ON" />
+
+    <Button
+        android:id="@+id/BtnDeviceOff"
+        android:layout_width="150dp"
+        android:layout_height="40dp"
+        android:layout_below="@id/Switch"
+        android:layout_toRightOf="@id/BtnDeviceOn"
+        android:text="DEVICE OFF" />
 
     <ImageView
         android:id="@+id/Image"
@@ -66,16 +89,32 @@
         android:layout_below="@id/TableLayout"
         android:layout_toRightOf="@id/Switch" />
 
-    <TextView
-        android:id="@+id/TextView"
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical" >
+    </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/scrollView1"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:layout_alignParentBottom="true"
         android:layout_alignParentLeft="true"
         android:layout_alignParentRight="true"
         android:layout_alignParentTop="false"
-        android:layout_below="@id/Switch"
-        android:layout_centerHorizontal="false"
-        android:scrollbars="vertical" />
+        android:layout_below="@id/BtnDeviceOff"
+        android:fillViewport="true"
+        android:scrollbarAlwaysDrawVerticalTrack="true"
+        android:scrollbars="vertical" >
+
+        <TextView
+            android:id="@+id/TextView"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_weight="1.0"
+            android:scrollbarAlwaysDrawVerticalTrack="false" />
+
+    </ScrollView>
 
 </RelativeLayout>

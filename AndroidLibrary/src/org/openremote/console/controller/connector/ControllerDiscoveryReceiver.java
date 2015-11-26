@@ -56,6 +56,14 @@ class ControllerDiscoveryReceiver extends Thread {
     
   void cancel() {
     cancelled = true;
+    if (serverSocket != null) {
+      try {
+        serverSocket.close();
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
     this.interrupt();
   }
   

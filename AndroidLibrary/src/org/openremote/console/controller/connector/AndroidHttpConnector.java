@@ -21,7 +21,8 @@
 package org.openremote.console.controller.connector;
 
 import java.io.UnsupportedEncodingException;
-import java.net.SocketTimeoutException;
+import java.net.MalformedURLException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,8 +34,8 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
 import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
+import org.openremote.console.controller.ControllerConnectionStatus;
 import org.openremote.console.controller.auth.Credentials;
-import org.openremote.console.controller.connector.HttpConnector.RestCommand;
 import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.ControllerResponseCode;
 
@@ -48,15 +49,18 @@ import com.loopj.android.http.ResponseHandlerInterface;
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  */
 public class AndroidHttpConnector extends HttpConnector {
+  private static final int HEARTBEAT_PERIOD = 10000;
   private final CustomAsyncHttpClient client = new CustomAsyncHttpClient();
-
+  //private Timer heartBeatTimer;
+  private AsyncControllerCallback<ControllerConnectionStatus> connectCallback;
+  
   public AndroidHttpConnector() {
     client.addHeader("Accept", "application/json");
     client.setTimeout(getTimeout());
   }
 
   @Override
-  protected void doRequest(String url, Map<String, String> headers, String content, final ControllerCallback callback, Integer timeout) {
+  protected void doRequest(URI uri, Map<String, String> headers, String content, final ControllerCallback callback, Integer timeout) {
     if (callback.command == RestCommand.DISCOVERY) {
       ResponseHandlerInterface handler = new AsyncHttpResponseHandler() {
         @Override
@@ -76,17 +80,17 @@ public class AndroidHttpConnector extends HttpConnector {
         }
         
         @Override
-        public void onFailure(int code, Throwable exception, String message) {
+        public void onSuccess(int code, Header[] headers, byte[] response) {
+          // Called each time a controller is discovered
+          handleResponse(callback, code, headers, response);
+        }
+
+        @Override
+        public void onFailure(int arg0, Header[] arg1, byte[] arg2, Throwable arg3) {
           // Called when discovery cannot be started
           AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback)callback.callback; 
           
           discoveryCallback.onStartDiscoveryFailed(ControllerResponseCode.UNKNOWN_ERROR);
-        }
-        
-        @Override
-        public void onSuccess(int code, Header[] headers, byte[] response) {
-          // Called each time a controller is discovered
-          handleResponse(callback, code, headers, response);
         }
       };
       
@@ -99,6 +103,24 @@ public class AndroidHttpConnector extends HttpConnector {
       client.stopDiscovery();
       return;
     }
+    
+    if (callback.command == RestCommand.DISCONNECT) {
+//      if (heartBeatTimer != null) {
+//        heartBeatTimer.cancel();
+//        heartBeatTimer = null;
+//      }
+      
+      // Terminate any open polling connections
+      client.cancelAllRequests(true);
+      
+      
+      if (connectCallback != null) {
+        connectCallback.onFailure(ControllerResponseCode.DISCONNECTED);
+        connectCallback = null;
+      }
+      
+      return;
+    }
 
     boolean doHead = false;
 
@@ -107,18 +129,78 @@ public class AndroidHttpConnector extends HttpConnector {
     }
 
     ResponseHandlerInterface handler = new AsyncHttpResponseHandler() {
+
+      @Override
+      public void onCancel() {
+        
+      }
+      
       @Override
       public void onSuccess(int code, Header[] headers, byte[] response) {
         if (callback.command == RestCommand.LOGOUT) {
-          client.clearBasicAuth();
+          client.clearCredentialsProvider();
           return;
         }
 
+        if (callback.command == RestCommand.CONNECT) {
+          connectCallback = (AsyncControllerCallback<ControllerConnectionStatus>) callback.callback;
+          
+//          // Create AsyncHttpResponseHandler to pass messages back to UI Thread
+//          // this means we have no compile time dependency on Android
+//          final AsyncHttpResponseHandler heartBeatCallback = new AsyncHttpResponseHandler() {
+//            @Override
+//            public boolean getUseSynchronousMode() {
+//                return true;
+//            }
+//            
+//            @Override
+//            public void onFailure(int arg0, Header[] arg1, byte[] arg2, Throwable arg3) {
+//              // Call connect callback onFailure with NO_RESPONSE
+//              connectCallback.onFailure(ControllerResponseCode.NO_RESPONSE);
+//            }
+//
+//            @Override
+//            public void onSuccess(int arg0, Header[] arg1, byte[] arg2) {
+//              connectCallback.onSuccess(new ControllerConnectionStatus(ControllerResponseCode.OK));              
+//            }
+//          };
+//          
+//          // Start heartbeat task
+//          final TimerTask task = new TimerTask() {
+//            
+//            @Override
+//            public void run() {
+//              getPanelList(new AsyncControllerCallback<List<PanelInfo>>() {
+//                @Override
+//                public void onSuccess(List<PanelInfo> result) {
+//                  if (!isConnected()) {
+//                    heartBeatCallback.sendSuccessMessage(200, null, null);
+//                  }
+//                }
+//                
+//                @Override
+//                public void onFailure(ControllerResponseCode error) {
+//                  // Cancel heartbeat if auto-reconnect is disabled
+//                  if (!isAutoReconnect()) {
+//                    heartBeatTimer.cancel();
+//                  }
+//                  
+//                  heartBeatCallback.sendFailureMessage(404, null, null, null);
+//                }           
+//              });
+//              
+//            }
+//          };
+//          
+//          heartBeatTimer = new Timer();
+//          heartBeatTimer.schedule(task, HEARTBEAT_PERIOD, HEARTBEAT_PERIOD);
+        }
+        
         handleResponse(callback, code, headers, response);
       }
 
       @Override
-      public void onFailure(int code, Throwable exception, String message) {        
+      public void onFailure(int arg0, Header[] arg1, byte[] arg2, Throwable exception) {
         if (callback.command == RestCommand.DO_SENSOR_POLLING && exception.getCause() instanceof ConnectTimeoutException) {
           callback.callback.onSuccess(null);
         } else {
@@ -129,7 +211,11 @@ public class AndroidHttpConnector extends HttpConnector {
     
     if (doHead) {
       client.setTimeout(timeout);
-      client.head(url, handler);
+      try {
+        client.head(uri.toURL().toString(), handler);
+      } catch (MalformedURLException e) {
+        callback.callback.onFailure(ControllerResponseCode.INVALID_URL);
+      }
     } else {
       StringEntity entity = null;
       Header[] headerArr = null;
@@ -155,7 +241,11 @@ public class AndroidHttpConnector extends HttpConnector {
       }
       
       client.setTimeout(timeout);
-      client.post(null, url, headerArr, entity, "application/json", handler);
+      try {
+        client.post(null, uri.toURL().toString(), headerArr, entity, "application/json", handler);
+      } catch (MalformedURLException e) {
+        callback.callback.onFailure(ControllerResponseCode.INVALID_URL);
+      }
     }
   }
   
@@ -163,7 +253,7 @@ public class AndroidHttpConnector extends HttpConnector {
   public void setCredentials(Credentials credentials) {
     this.credentials = credentials;
     
-    client.clearBasicAuth();
+    client.clearCredentialsProvider();
 
     if (credentials != null) {
       client.setBasicAuth(credentials.getUsername(), credentials.getPassword());
@@ -175,7 +265,7 @@ public class AndroidHttpConnector extends HttpConnector {
     credentials = null;
     
     if (controllerUrl != null) {
-      doRequest(buildRequestUrl(RestCommand.LOGOUT), null, null, new ControllerCallback(RestCommand.LOGOUT, callback),
+      doRequest(buildRequestUri(RestCommand.LOGOUT), null, null, new ControllerCallback(RestCommand.LOGOUT, callback),
 getTimeout());
     }
     else {

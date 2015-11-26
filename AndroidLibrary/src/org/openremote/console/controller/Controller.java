@@ -48,7 +48,6 @@ public class Controller {
   //private ControllerConnector connector = new SingleThreadHttpConnector();
   private String name;
   private String version;
-  private AsyncControllerCallback<ControllerConnectionStatus> connectCallback;
   private ControllerInfo controllerInfo;
   private List<DeviceRegistrationHandle> registeredDevices = new ArrayList<DeviceRegistrationHandle>();
   private List<PanelRegistrationHandle> registeredPanels = new ArrayList<PanelRegistrationHandle>();
@@ -223,7 +222,7 @@ public class Controller {
       }
     }
     
-    doRegistration(registration);
+    doRegistration(registration, true);
     return registration;
   }
   
@@ -259,24 +258,28 @@ public class Controller {
     // Connect up command sender
     registration.getDevice().setCommandSender(connector);
     
-    doRegistration(registration);    
+    doRegistration(registration, true);    
     return registration;
   }
 
-  private void doRegistration(final RegistrationHandle registration) {
+  private void doRegistration(final RegistrationHandle registration, final boolean firstRun) {
     final List<Integer> sensorIds = registration.getSensorIds();
     final AsyncControllerCallback<Map<Integer, String>> monitorCallback = new AsyncControllerCallback<Map<Integer, String>>() {
       @Override
       public void onFailure(ControllerResponseCode error) {
-        // Pass error back to registration callback
-        registration.getCallback().onFailure(error);
+        if (firstRun) {
+          // Pass error back to registration callback
+          registration.getCallback().onFailure(error);
+        }
       }
 
       @Override
       public void onSuccess(Map<Integer, String> result) {
         // Pass through to registration handle
         registration.onSensorsChanged(result);
-        registration.getCallback().onSuccess();
+        if (firstRun) {
+          registration.getCallback().onSuccess();
+        }
         
         if (isConnected() && registration.isRegistered()) {
           monitorSensors(registration);
@@ -288,8 +291,10 @@ public class Controller {
     if (sensorIds != null && sensorIds.size() > 0) {
       connector.getSensorValues(sensorIds, monitorCallback);
     } else {
-      // Just call registration onSuccess callback
-      registration.getCallback().onSuccess();
+      if (firstRun) {
+        // Just call registration onSuccess callback
+        registration.getCallback().onSuccess();
+      }
     }
   }
   
@@ -314,7 +319,7 @@ public class Controller {
       }
     };
     
-    connector.monitorSensors(sensorIds, monitorCallback);
+    connector.monitorSensors(registration.uuid, sensorIds, monitorCallback);
   }
 
   /**
@@ -355,6 +360,8 @@ public class Controller {
         }
       }
     }
+    
+    registrationHandle.getCallback().onFailure(ControllerResponseCode.UNREGISTERED);
   }
   
   /**
@@ -364,15 +371,17 @@ public class Controller {
    * @param device
    */
   public void unregisterDevice(DeviceRegistrationHandle registrationHandle) {
-    if (registrationHandle == null || !registeredPanels.contains(registrationHandle) || registrationHandle.getDevice() == null) {
+    if (registrationHandle == null || !registeredDevices.contains(registrationHandle) || registrationHandle.getDevice() == null) {
       return;
     }
     
-    registeredPanels.remove(registrationHandle);
+    registeredDevices.remove(registrationHandle);
     registrationHandle.setIsRegistered(false);
     
     // Disconnect command sender and resource locator
     registrationHandle.getDevice().setCommandSender(null);
+    
+    registrationHandle.getCallback().onFailure(ControllerResponseCode.UNREGISTERED);
   }
 
 
@@ -385,13 +394,9 @@ public class Controller {
    * is already connected. Previous connection callback will be called on connection complete
    * @param url
    */
-  public void setControllerInfo(ControllerInfo controllerInfo) {
-    boolean isConnected = isConnected();
-    disconnect();
-    this.controllerInfo = controllerInfo;
-
-    if (isConnected && connectCallback != null) {
-      connect(connectCallback);
+  private void setControllerInfo(ControllerInfo controllerInfo) {
+    if (!isConnected()) {
+      this.controllerInfo = controllerInfo;  
     }
   }
 
@@ -416,8 +421,6 @@ public class Controller {
       return;
     }
     
-    connectCallback = callback;
-    
     // Set connector URL
     if (controllerInfo == null || controllerInfo.getUrl() == null || controllerInfo.getUrl().isEmpty()) {
       callback.onFailure(ControllerResponseCode.INVALID_URL);
@@ -437,10 +440,10 @@ public class Controller {
       public void onSuccess(ControllerConnectionStatus result) {
         // Restart any existing sensor monitors
         for (PanelRegistrationHandle panelReg : registeredPanels) {
-          monitorSensors(panelReg);
+          doRegistration(panelReg, false);
         }
         for (DeviceRegistrationHandle deviceReg : registeredDevices) {
-          monitorSensors(deviceReg);
+          doRegistration(deviceReg, false);
         }
         callback.onSuccess(result);
       }
@@ -458,9 +461,6 @@ public class Controller {
    */
   public void disconnect() {
     connector.disconnect();
-    if (connectCallback != null) {
-      connectCallback.onFailure(ControllerResponseCode.DISCONNECTED);
-    }
   }
 
   /**

@@ -60,16 +60,8 @@ public class SingleThreadHttpConnector extends HttpConnector {
           .setDefaultRequestConfig(config).build();
 
   @Override
-  protected void doRequest(String url, Map<String, String> headers, String content, final ControllerCallback callback, Integer timeout) {
+  protected void doRequest(URI uri, Map<String, String> headers, String content, final ControllerCallback callback, Integer timeout) {
     boolean doHead = false;
-    URI uri;
-    try {
-      URL urlObject = new URL(url);
-      uri = new URI(urlObject.getProtocol(), urlObject.getUserInfo(), urlObject.getHost(), urlObject.getPort(), urlObject.getPath(), urlObject.getQuery(), urlObject.getRef());
-    } catch (Exception e) {
-      callback.callback.onFailure(ControllerResponseCode.INVALID_URL);
-      return;
-    }
     
     if (callback.command == RestCommand.GET_RESOURCE_DETAILS) {
       doHead = true;
