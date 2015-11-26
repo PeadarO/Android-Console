@@ -23,24 +23,25 @@ package org.openremote.console.controller.service;
 import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.console.controller.connector.AndroidHttpConnector;
 import org.openremote.console.controller.connector.ControllerConnector;
-import org.openremote.console.controller.connector.SingleThreadHttpConnector;
 
 /**
- * Controller discovery service for asynchronously discovering controllers within
- * the current local area network.
+ * Controller discovery service for asynchronously discovering controllers
+ * within the current local area network.
+ * 
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
- *
+ * 
  */
 public class ControllerDiscoveryService {
   public static final int DEFAULT_SEARCH_DURATION = 5000;
   public static final int DEFAULT_TCP_PORT = 2346;
   private static Class<?> connectorClazz = AndroidHttpConnector.class;
   private static ControllerConnector connector;
-//  private static final ControllerConnector connector = new AndroidHttpConnector();
-  
+  // private static final ControllerConnector connector = new
+  // AndroidHttpConnector();
+
   static {
     try {
-      connector = (ControllerConnector)connectorClazz.newInstance();
+      connector = (ControllerConnector) connectorClazz.newInstance();
     } catch (InstantiationException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
@@ -49,56 +50,63 @@ public class ControllerDiscoveryService {
       e.printStackTrace();
     }
   }
-  
+
   private ControllerDiscoveryService() {
-    
+
   }
 
   /**
-   * Start Controller Discovery and use the specified callback for reporting progress.
-   * Discovery will continue until {@link org.openremote.java.console.controller.service.stopDiscovery} is called.
+   * Start Controller Discovery and use the specified callback for reporting
+   * progress. Discovery will continue until {@link #stopDiscovery} is called.
+   * 
    * @param callback
    */
   public static void startDiscovery(AsyncControllerDiscoveryCallback callback) {
     startDiscovery(callback, DEFAULT_TCP_PORT, null);
   }
-  
+
   /**
-   * Start Controller Discovery and use the specified callback for reporting progress.
-   * Discovery will run for the specified number of milliseconds
+   * Start Controller Discovery and use the specified callback for reporting
+   * progress. Discovery will run for the specified number of milliseconds
+   * 
    * @param callback
    * @param searchDuration
    */
   public static void startDiscovery(AsyncControllerDiscoveryCallback callback, int searchDuration) {
     startDiscovery(callback, DEFAULT_TCP_PORT, new Integer(searchDuration));
   }
-  
+
   /**
-   * Start Controller Discovery and use the specified callback for reporting progress.
-   * Discovery will run for the specified number of milliseconds on the specified TCP port.
+   * Start Controller Discovery and use the specified callback for reporting
+   * progress. Discovery will run for the specified number of milliseconds on
+   * the specified TCP port.
+   * 
    * @param callback
    * @param searchDuration
    */
-  public static void startDiscovery(AsyncControllerDiscoveryCallback callback, int searchDuration, int tcpPort) {
+  public static void startDiscovery(AsyncControllerDiscoveryCallback callback, int searchDuration,
+          int tcpPort) {
     startDiscovery(callback, tcpPort, new Integer(searchDuration));
   }
-  
-  private static void startDiscovery(AsyncControllerDiscoveryCallback callback, int tcpPort, Integer searchDuration) {
+
+  private static void startDiscovery(AsyncControllerDiscoveryCallback callback, int tcpPort,
+          Integer searchDuration) {
     connector.startDiscovery(callback, tcpPort, searchDuration);
   }
-  
+
   /**
-   * Stop the currently running discovery service.
-   * The {@link org.openremote.java.console.controller.AsyncControllerDiscoveryCallback.onDiscoveryStopped} method
-   * of the callback supplied when discovery started will be called.
+   * Stop the currently running discovery service. The
+   * {@link org.openremote.console.controller.AsyncControllerDiscoveryCallback#onDiscoveryStopped}
+   * method of the callback supplied when discovery started will be called.
    */
   public static void stopDiscovery() {
     connector.stopDiscovery();
   }
-  
+
   /**
    * Check if discovery is currently running.
-   * @return
+   * 
+   * @return is controller discovery currently running
    */
   public static boolean isDiscoveryRunning() {
     return connector.isDiscoveryRunning();

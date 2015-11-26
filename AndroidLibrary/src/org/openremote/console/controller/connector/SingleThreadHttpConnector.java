@@ -25,7 +25,6 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
-import java.net.URL;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -51,18 +50,17 @@ import org.openremote.entities.controller.ControllerResponseCode;
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  */
 public class SingleThreadHttpConnector extends HttpConnector {
-  private final RequestConfig config = RequestConfig.custom()
-          .setSocketTimeout(getTimeout())
-          .setConnectionRequestTimeout(getTimeout())
-          .setConnectTimeout(getTimeout()).build();
+  private final RequestConfig config = RequestConfig.custom().setSocketTimeout(getTimeout())
+          .setConnectionRequestTimeout(getTimeout()).setConnectTimeout(getTimeout()).build();
   private final CredentialsProvider creds = new BasicCredentialsProvider();
   private final HttpClient client = HttpClients.custom().setDefaultCredentialsProvider(creds)
           .setDefaultRequestConfig(config).build();
 
   @Override
-  protected void doRequest(URI uri, Map<String, String> headers, String content, final ControllerCallback callback, Integer timeout) {
+  protected void doRequest(URI uri, Map<String, String> headers, String content,
+          final ControllerCallback callback, Integer timeout) {
     boolean doHead = false;
-    
+
     if (callback.command == RestCommand.GET_RESOURCE_DETAILS) {
       doHead = true;
     }
@@ -80,7 +78,7 @@ public class SingleThreadHttpConnector extends HttpConnector {
       httpPost.setConfig(RequestConfig.custom().setSocketTimeout(timeout)
               .setConnectionRequestTimeout(timeout).setConnectTimeout(timeout).build());
       if (headers != null) {
-        for (Entry<String,String> header : headers.entrySet()) {
+        for (Entry<String, String> header : headers.entrySet()) {
           httpPost.addHeader(header.getKey(), header.getValue());
         }
       }
@@ -97,9 +95,9 @@ public class SingleThreadHttpConnector extends HttpConnector {
 
     HttpResponse response = null;
     byte[] responseData = null;
-    
+
     try {
-      response = client.execute(http);     
+      response = client.execute(http);
 
       if (response.getEntity() != null) {
         InputStream is = response.getEntity().getContent();
@@ -128,8 +126,9 @@ public class SingleThreadHttpConnector extends HttpConnector {
       }
       return;
     }
-    
-    handleResponse(callback, response.getStatusLine().getStatusCode(), response.getAllHeaders(), responseData);
+
+    handleResponse(callback, response.getStatusLine().getStatusCode(), response.getAllHeaders(),
+            responseData);
   }
 
   @Override

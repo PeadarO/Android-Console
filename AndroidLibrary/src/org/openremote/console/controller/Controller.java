@@ -29,7 +29,6 @@ import java.util.Map;
 import org.openremote.console.controller.auth.Credentials;
 import org.openremote.console.controller.connector.AndroidHttpConnector;
 import org.openremote.console.controller.connector.ControllerConnector;
-import org.openremote.console.controller.connector.SingleThreadHttpConnector;
 import org.openremote.entities.panel.*;
 import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.ControllerInfo;
@@ -39,21 +38,25 @@ import org.openremote.entities.controller.DeviceInfo;
 
 /**
  * This is the main Controller class used for interacting with a controller; the
- * Controller is used to get panel information and to register/unregister panels
+ * Controller is used to get panel and device information and to
+ * register/unregister panels and devices
+ * 
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  */
 public class Controller {
   // TODO: Inject the appropriate connector
   private ControllerConnector connector;
-  //private ControllerConnector connector = new SingleThreadHttpConnector();
+  // private ControllerConnector connector = new SingleThreadHttpConnector();
   private String name;
   private String version;
   private ControllerInfo controllerInfo;
   private List<DeviceRegistrationHandle> registeredDevices = new ArrayList<DeviceRegistrationHandle>();
   private List<PanelRegistrationHandle> registeredPanels = new ArrayList<PanelRegistrationHandle>();
   private static Class<?> connectorClazz = AndroidHttpConnector.class;
+
   /**
    * Create a controller from the specified string URL
+   * 
    * @param url
    * @throws ConnectionException
    */
@@ -63,7 +66,9 @@ public class Controller {
 
   /**
    * Create a controller from the specified string URL using the specified
-   * {@link org.openremote.console.controller.auth.Credentials} for the connection
+   * {@link org.openremote.console.controller.auth.Credentials} for the
+   * connection
+   * 
    * @param url
    * @param credentials
    */
@@ -72,24 +77,29 @@ public class Controller {
   }
 
   /**
-   * Create a controller from the specified {@link org.openremote.entities.controller.ControllerInfo}
+   * Create a controller from the specified
+   * {@link org.openremote.entities.controller.ControllerInfo}
+   * 
    * @param controllerInfo
    * @throws ConnectionException
    */
   public Controller(ControllerInfo controllerInfo) {
     this(controllerInfo, null);
   }
-  
+
   /**
-   * Create a controller from the specified {@link org.openremote.entities.controller.ControllerInfo}
-   * using the specified {@link org.openremote.console.controller.auth.Credentials} for the connection
+   * Create a controller from the specified
+   * {@link org.openremote.entities.controller.ControllerInfo} using the
+   * specified {@link org.openremote.console.controller.auth.Credentials} for
+   * the connection
+   * 
    * @param controllerInfo
    * @param credentials
    * @throws ConnectionException
    */
   public Controller(ControllerInfo controllerInfo, Credentials credentials) {
     try {
-      connector = (ControllerConnector)connectorClazz.newInstance();
+      connector = (ControllerConnector) connectorClazz.newInstance();
     } catch (InstantiationException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
@@ -101,7 +111,7 @@ public class Controller {
     setCredentials(credentials);
     connector.setTimeout(getTimeout());
   }
-  
+
   public static void setConnectorType(Class<?> connectorClass) {
     if (ControllerConnector.class.isAssignableFrom(connectorClass)) {
       connectorClazz = connectorClass;
@@ -109,8 +119,10 @@ public class Controller {
   }
 
   /**
-   * Set the timeout for the connection to the controller; default value is {@value #DEFAULT_TIMEOUT}.
-   * Useful to change this if link/hardware is slow.
+   * Set the timeout for the connection to the controller; default value is
+   * {@value org.openremote.console.controller.connector.ControllerConnector#DEFAULT_TIMEOUT}
+   * . Useful to change this if link/hardware is slow.
+   * 
    * @param timeout
    */
   public void setTimeout(int timeout) {
@@ -119,15 +131,17 @@ public class Controller {
 
   /**
    * Get the current timeout for the connection to the controller
-   * @return
+   * 
+   * @return connection timeout in milliseconds
    */
   public int getTimeout() {
     return connector.getTimeout();
   }
 
   /**
-   * Set the {@link org.openremote.console.controller.auth.Credentials} to be used for this
-   * connection
+   * Set the {@link org.openremote.console.controller.auth.Credentials} to be
+   * used for this connection
+   * 
    * @param credentials
    */
   public void setCredentials(Credentials credentials) {
@@ -135,57 +149,66 @@ public class Controller {
   }
 
   /**
-   * Get the {@link org.openremote.console.controller.auth.Credentials} used by this controller
-   * @return
+   * Get the {@link org.openremote.console.controller.auth.Credentials} used by
+   * this controller
+   * 
+   * @return {@link Credentials} used by this controller
    */
   public Credentials getCredentials() {
     return connector.getCredentials();
   }
-  
-  /**
-   * Sets whether or not the connection to the controller will be automatically re-established
-   * when a connection error occurs.
-   * @param autoReconnect
-   */
-  public void setAutoReconnect(boolean autoReconnect) {
-    connector.setAutoReconnect(autoReconnect);
-  }
-  
-  /**
-   * Indicates whether the connection to the controller will be automatically re-established
-   * when a connection error occurs.
-   * @return
-   */
-  public boolean isAutoReconnect() {
-    return connector.isAutoReconnect();
-  }
+
+  // /**
+  // * Sets whether or not the connection to the controller will be
+  // automatically re-established
+  // * when a connection error occurs.
+  // * @param autoReconnect
+  // */
+  // public void setAutoReconnect(boolean autoReconnect) {
+  // connector.setAutoReconnect(autoReconnect);
+  // }
+  //
+  // /**
+  // * Indicates whether the connection to the controller will be automatically
+  // re-established
+  // * when a connection error occurs.
+  // * @return is autoreconnect enabled
+  // */
+  // public boolean isAutoReconnect() {
+  // return connector.isAutoReconnect();
+  // }
 
   /**
-   * Get the {@link org.openremote.entities.controller.ControllerInfo} for this controller
-   * @return
+   * Get the {@link org.openremote.entities.controller.ControllerInfo} for this
+   * controller
+   * 
+   * @return {@link ControllerInfo} for this controller
    */
   public ControllerInfo getControllerInfo() {
-    return new ControllerInfo(connector.getControllerUrl().toString(), name, version, connector.getControllerIdentity());
+    return new ControllerInfo(connector.getControllerUrl().toString(), name, version,
+            connector.getControllerIdentity());
   }
 
   /**
-   * Registers the panel asynchronously with this controller (it is the caller's responsibility
-   * to ensure that the panel being registered is loaded into this controller and is up to date.
-   * If a panel is out of date or isn't loaded into this controller then unpredictable behaviour
-   * will occur.
+   * Registers the panel asynchronously with this controller (it is the caller's
+   * responsibility to ensure that the panel being registered is loaded into
+   * this controller and is up to date. If a panel is out of date or isn't
+   * loaded into this controller then unpredictable behaviour will occur.
    * 
-   * Registering means that you will be able to interact with widgets and receive property change
-   * notifications from widgets when sensor values change and you will be able to retrieve widget
-   * resources from the controller.
+   * Registering means that you will be able to interact with widgets and
+   * receive property change notifications from widgets when sensor values
+   * change and you will be able to retrieve widget resources from the
+   * controller.
    * 
    * @param panel
    */
-  public synchronized PanelRegistrationHandle registerPanel(final Panel panel, AsyncRegistrationCallback callback) {
+  public synchronized PanelRegistrationHandle registerPanel(final Panel panel,
+          AsyncRegistrationCallback callback) {
     if (panel == null) {
       callback.onFailure(ControllerResponseCode.PANEL_NULL);
       return null;
     }
-    
+
     // Check if panel is already registered
     for (PanelRegistrationHandle registeredPanel : registeredPanels) {
       if (registeredPanel.getPanel() == panel) {
@@ -193,16 +216,16 @@ public class Controller {
         return registeredPanel;
       }
     }
-    
+
     // Create handle
     PanelRegistrationHandle registration = new PanelRegistrationHandle(panel, callback);
     registeredPanels.add(registration);
     registration.setIsRegistered(true);
-    
+
     // Connect up command sender and resource locator
     List<ResourceConsumer> consumers = panel.getResourceConsumers();
     List<Widget> widgets = panel.getWidgets();
-    
+
     if (consumers != null) {
       for (ResourceConsumer consumer : consumers) {
         List<ResourceInfo> resources = consumer.getResources();
@@ -221,27 +244,27 @@ public class Controller {
         }
       }
     }
-    
+
     doRegistration(registration, true);
     return registration;
   }
-  
+
   /**
-   * Registers the device with this controller (it is the caller's responsibility
-   * to ensure that the device belongs to this controller; otherwise callbacks
-   * will fail or return unexpected results). Registering means that you will be
-   * able to send commands to the device and you will receive notification
-   * of sensor value changes.
+   * Registers the device with this controller (it is the caller's
+   * responsibility to ensure that the device belongs to this controller;
+   * otherwise callbacks will fail or return unexpected results). Registering
+   * means that you will be able to send commands to the device and you will
+   * receive notification of sensor value changes.
    * 
    * @param device
    */
   public DeviceRegistrationHandle registerDevice(Device device, AsyncRegistrationCallback callback) {
-    
+
     if (device == null) {
       callback.onFailure(ControllerResponseCode.DEVICE_NULL);
       return null;
     }
-    
+
     // Check if device is already registered
     for (DeviceRegistrationHandle registeredDevice : registeredDevices) {
       if (registeredDevice.getDevice() == device) {
@@ -249,16 +272,16 @@ public class Controller {
         return registeredDevice;
       }
     }
-    
+
     // Create handle
     DeviceRegistrationHandle registration = new DeviceRegistrationHandle(device, callback);
     registeredDevices.add(registration);
     registration.setIsRegistered(true);
-    
+
     // Connect up command sender
     registration.getDevice().setCommandSender(connector);
-    
-    doRegistration(registration, true);    
+
+    doRegistration(registration, true);
     return registration;
   }
 
@@ -280,14 +303,14 @@ public class Controller {
         if (firstRun) {
           registration.getCallback().onSuccess();
         }
-        
+
         if (isConnected() && registration.isRegistered()) {
           monitorSensors(registration);
         }
       }
     };
-        
-    // Get initial sensor values    
+
+    // Get initial sensor values
     if (sensorIds != null && sensorIds.size() > 0) {
       connector.getSensorValues(sensorIds, monitorCallback);
     } else {
@@ -297,7 +320,7 @@ public class Controller {
       }
     }
   }
-  
+
   private void monitorSensors(final RegistrationHandle registration) {
     final List<Integer> sensorIds = registration.getSensorIds();
     final AsyncControllerCallback<Map<Integer, String>> monitorCallback = new AsyncControllerCallback<Map<Integer, String>>() {
@@ -310,7 +333,7 @@ public class Controller {
       @Override
       public void onSuccess(Map<Integer, String> result) {
         if (isConnected() && registration.isRegistered()) {
-          if(result != null) {
+          if (result != null) {
             // Pass through to registration handle
             registration.onSensorsChanged(result);
           }
@@ -318,30 +341,31 @@ public class Controller {
         }
       }
     };
-    
+
     connector.monitorSensors(registration.uuid, sensorIds, monitorCallback);
   }
 
   /**
    * Unregisters a panel from the controller; no more sensor change
-   * notifications will be received and it will not be possible to send
-   * commands to the panel widgets or resolve resources.
+   * notifications will be received and it will not be possible to send commands
+   * to the panel widgets or resolve resources.
    * 
    * @param registrationHandle
    */
   public void unregisterPanel(PanelRegistrationHandle registrationHandle) {
-    if (registrationHandle == null || !registeredPanels.contains(registrationHandle) || registrationHandle.getPanel() == null) {
+    if (registrationHandle == null || !registeredPanels.contains(registrationHandle)
+            || registrationHandle.getPanel() == null) {
       return;
     }
-    
+
     registeredPanels.remove(registrationHandle);
     registrationHandle.setIsRegistered(false);
     Panel panel = registrationHandle.getPanel();
-    
+
     // Disconnect command sender and resource locator
     List<ResourceConsumer> consumers = panel.getResourceConsumers();
     List<Widget> widgets = panel.getWidgets();
-    
+
     if (consumers != null) {
       for (ResourceConsumer consumer : consumers) {
         List<ResourceInfo> resources = consumer.getResources();
@@ -360,80 +384,89 @@ public class Controller {
         }
       }
     }
-    
-    registrationHandle.getCallback().onFailure(ControllerResponseCode.UNREGISTERED);
-  }
-  
-  /**
-   * Unregisters a device from the controller; no more sensor
-   * change notifications will be received and it will no longer
-   * be possible to send commands to this device
-   * @param device
-   */
-  public void unregisterDevice(DeviceRegistrationHandle registrationHandle) {
-    if (registrationHandle == null || !registeredDevices.contains(registrationHandle) || registrationHandle.getDevice() == null) {
-      return;
-    }
-    
-    registeredDevices.remove(registrationHandle);
-    registrationHandle.setIsRegistered(false);
-    
-    // Disconnect command sender and resource locator
-    registrationHandle.getDevice().setCommandSender(null);
-    
+
     registrationHandle.getCallback().onFailure(ControllerResponseCode.UNREGISTERED);
   }
 
+  /**
+   * Unregisters a device from the controller; no more sensor change
+   * notifications will be received and it will no longer be possible to send
+   * commands to this device
+   * 
+   * @param registrationHandle
+   */
+  public void unregisterDevice(DeviceRegistrationHandle registrationHandle) {
+    if (registrationHandle == null || !registeredDevices.contains(registrationHandle)
+            || registrationHandle.getDevice() == null) {
+      return;
+    }
+
+    registeredDevices.remove(registrationHandle);
+    registrationHandle.setIsRegistered(false);
+
+    // Disconnect command sender and resource locator
+    registrationHandle.getDevice().setCommandSender(null);
+
+    registrationHandle.getCallback().onFailure(ControllerResponseCode.UNREGISTERED);
+  }
 
   // ------------------------------------------------------------------------------
   // Connector Wrapper Methods
   // ------------------------------------------------------------------------------
 
   /**
-   * Set the Controller Info; will cause a disconnect and re-connect if controller
-   * is already connected. Previous connection callback will be called on connection complete
+   * Set the Controller Info; will cause a disconnect and re-connect if
+   * controller is already connected. Previous connection callback will be
+   * called on connection complete
+   * 
    * @param url
    */
   private void setControllerInfo(ControllerInfo controllerInfo) {
     if (!isConnected()) {
-      this.controllerInfo = controllerInfo;  
+      this.controllerInfo = controllerInfo;
     }
   }
 
   /**
    * Gets the URL of the controller
-   * @return
+   * 
+   * @return {@link URL} of controller
    */
   public URL getControllerUrl() {
     return connector.getControllerUrl();
-  }  
+  }
 
   /**
-   * Connects to this controller and calls the {@link org.openremote.entities.controller.AsyncControllerCallback<org.openremote.java.console.controller.ControllerConnectionStatus>}
-   * callback to be called when finished. Using the specified timeout for the connection attempt.
-   * Any already registered panels will resume monitoring when the connection is re-established.
+   * Connects to this controller and calls the
+   * {@link org.openremote.entities.controller.AsyncControllerCallback} with
+   * response type of
+   * {@link org.openremote.console.controller.ControllerConnectionStatus}
+   * callback to be called when finished. Using the specified timeout for the
+   * connection attempt. Any already registered panels will resume monitoring
+   * when the connection is re-established.
+   * 
    * @param callback
-   * @param timeout
    */
   public void connect(final AsyncControllerCallback<ControllerConnectionStatus> callback) {
     if (connector == null) {
       callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
       return;
     }
-    
+
     // Set connector URL
-    if (controllerInfo == null || controllerInfo.getUrl() == null || controllerInfo.getUrl().isEmpty()) {
+    if (controllerInfo == null || controllerInfo.getUrl() == null
+            || controllerInfo.getUrl().isEmpty()) {
       callback.onFailure(ControllerResponseCode.INVALID_URL);
       return;
     }
-    
+
     try {
       connector.setControllerUrl(new URL(controllerInfo.getUrl()));
     } catch (MalformedURLException e) {
       callback.onFailure(ControllerResponseCode.INVALID_URL);
       return;
     }
-    
+
     connector.connect(new AsyncControllerCallback<ControllerConnectionStatus>() {
 
       @Override
@@ -456,8 +489,9 @@ public class Controller {
   }
 
   /**
-   * Disconnect from the controller; this will preserve any registrations but their
-   * onFailure callbacks will be called to indicate a DISCONNECT has occurred.
+   * Disconnect from the controller; this will preserve any registrations but
+   * their onFailure callbacks will be called to indicate a DISCONNECT has
+   * occurred.
    */
   public void disconnect() {
     connector.disconnect();
@@ -465,14 +499,17 @@ public class Controller {
 
   /**
    * Indicates if this controller is currently connected
-   * @return
+   * 
+   * @return is connected.
    */
   public boolean isConnected() {
     return connector.isConnected();
   }
 
   /**
-   * Get list of {@link org.openremote.entities.panel.PanelInfo} names asynchronously from this controller
+   * Get list of {@link org.openremote.entities.panel.PanelInfo} names
+   * asynchronously from this controller
+   * 
    * @param callback
    */
   public void getPanelList(AsyncControllerCallback<List<PanelInfo>> callback) {
@@ -480,7 +517,9 @@ public class Controller {
   }
 
   /**
-   * Get the specified {@link org.openremote.entities.panel.Panel} from this controller
+   * Get the specified {@link org.openremote.entities.panel.Panel} from this
+   * controller
+   * 
    * @param panelName
    * @param callback
    */
@@ -489,15 +528,19 @@ public class Controller {
   }
 
   /**
-   * Get list of {@link org.openremote.entities.controller.Device} names asynchronously from this controller
+   * Get list of {@link org.openremote.entities.controller.Device} names
+   * asynchronously from this controller
+   * 
    * @param callback
    */
   public void getDeviceList(AsyncControllerCallback<List<DeviceInfo>> callback) {
     connector.getDeviceList(callback);
   }
-  
+
   /**
-   * Get the specified {@link org.openremote.entities.controller.Device} from this controller
+   * Get the specified {@link org.openremote.entities.controller.Device} from
+   * this controller
+   * 
    * @param deviceName
    * @param callback
    */
@@ -507,6 +550,7 @@ public class Controller {
 
   /**
    * Logout from the controller (i.e. remove current credentials)
+   * 
    * @param callback
    */
   public void logout(AsyncControllerCallback<Boolean> callback) {

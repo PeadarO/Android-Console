@@ -29,10 +29,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.UUID;
-
 import org.apache.http.Header;
 import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.console.controller.ControllerConnectionStatus;
@@ -41,7 +37,6 @@ import org.openremote.entities.panel.Panel;
 import org.openremote.entities.panel.PanelInfo;
 import org.openremote.entities.panel.ResourceDataResponse;
 import org.openremote.entities.panel.ResourceInfoDetails;
-import org.openremote.entities.panel.ResourceLocator;
 import org.openremote.entities.util.JacksonProcessor;
 import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.Command;
@@ -58,9 +53,9 @@ import org.openremote.entities.controller.SensorStatus;
 import org.openremote.entities.controller.SensorStatusList;
 
 /**
- * Base class for HTTP connector implementations. This uses the HTTP
- * REST API which is obviously connectionless so we mimic a connection
- * using a heartbeat timer to poll the panel list REST API 
+ * Base class for HTTP connector implementations. This uses the HTTP REST API
+ * which is obviously connectionless so we mimic a connection using a heartbeat
+ * timer to poll the panel list REST API
  * 
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  */
@@ -83,7 +78,6 @@ abstract class HttpConnector implements ControllerConnector {
     STOP_DISCOVERY(""),
     GET_DEVICE_LIST("rest/devices/"),
     GET_DEVICE("rest/devices/");
-    
 
     private String url;
 
@@ -98,7 +92,7 @@ abstract class HttpConnector implements ControllerConnector {
   protected URL controllerUrl;
   protected Credentials credentials;
   private int timeout;
-  
+
   protected HttpConnector() {
   }
 
@@ -111,7 +105,7 @@ abstract class HttpConnector implements ControllerConnector {
   public URL getControllerUrl() {
     return controllerUrl;
   }
-  
+
   @Override
   public String getControllerIdentity() {
     // TODO: Implement controller identity population
@@ -127,12 +121,12 @@ abstract class HttpConnector implements ControllerConnector {
   public void setTimeout(int timeout) {
     this.timeout = timeout;
   }
-  
+
   @Override
   public int getTimeout() {
     return timeout;
   }
-  
+
   @Override
   public boolean isConnected() {
     return connected;
@@ -143,8 +137,8 @@ abstract class HttpConnector implements ControllerConnector {
     // Check URL is valid
     if (controllerUrl != null && !isConnected() && !connectInProgress) {
       connectInProgress = true;
-      doRequest(buildRequestUri(RestCommand.CONNECT), null, null,
-              new ControllerCallback(RestCommand.CONNECT, new AsyncControllerCallback<ControllerConnectionStatus>() {
+      doRequest(buildRequestUri(RestCommand.CONNECT), null, null, new ControllerCallback(
+              RestCommand.CONNECT, new AsyncControllerCallback<ControllerConnectionStatus>() {
 
                 @Override
                 public void onFailure(ControllerResponseCode error) {
@@ -158,7 +152,7 @@ abstract class HttpConnector implements ControllerConnector {
                   connectInProgress = false;
                   callback.onSuccess(result);
                 }
-                
+
               }), timeout);
     }
   }
@@ -168,7 +162,7 @@ abstract class HttpConnector implements ControllerConnector {
     if (!isConnected()) {
       return;
     }
-    
+
     doRequest(null, null, null, new ControllerCallback(RestCommand.DISCONNECT, null), timeout);
   }
 
@@ -185,20 +179,20 @@ abstract class HttpConnector implements ControllerConnector {
   public void getPanel(String panelName, AsyncControllerCallback<Panel> callback) {
     // Check URL is valid
     if (controllerUrl != null) {
-      doRequest(buildRequestUri(new String[] { panelName }, RestCommand.GET_PANEL_LAYOUT), null, null,
-              new ControllerCallback(RestCommand.GET_PANEL_LAYOUT, callback), timeout);
+      doRequest(buildRequestUri(new String[] { panelName }, RestCommand.GET_PANEL_LAYOUT), null,
+              null, new ControllerCallback(RestCommand.GET_PANEL_LAYOUT, callback), timeout);
     }
   }
-  
+
   @Override
   public void getDeviceList(AsyncControllerCallback<List<DeviceInfo>> callback) {
     // Check URL is valid
     if (controllerUrl != null) {
       doRequest(buildRequestUri(RestCommand.GET_DEVICE_LIST), null, null, new ControllerCallback(
               RestCommand.GET_DEVICE_LIST, callback), timeout);
-    } 
+    }
   }
-  
+
   @Override
   public void getDevice(String deviceName, AsyncControllerCallback<Device> callback) {
     // Check URL is valid
@@ -229,10 +223,10 @@ abstract class HttpConnector implements ControllerConnector {
     // Check URL is valid
     if (controllerUrl != null) {
       doRequest(
-              buildRequestUri(
-                      new String[] { Arrays.toString(sensorIds.toArray()).replace(", ", ",").replace("]", "")
-                              .replace("[", "") }, RestCommand.GET_SENSOR_STATUS), null, null,
-              new ControllerCallback(RestCommand.GET_SENSOR_STATUS, callback), timeout);
+              buildRequestUri(new String[] { Arrays.toString(sensorIds.toArray())
+                      .replace(", ", ",").replace("]", "").replace("[", "") },
+                      RestCommand.GET_SENSOR_STATUS), null, null, new ControllerCallback(
+                      RestCommand.GET_SENSOR_STATUS, callback), timeout);
     }
   }
 
@@ -241,11 +235,14 @@ abstract class HttpConnector implements ControllerConnector {
           AsyncControllerCallback<ControlCommandResponse> callback) {
     // Check URL is valid
     if (controllerUrl != null) {
-      doRequest(buildRequestUri(new String[] { Integer.toString(command.getSenderId()), command.getData() }, RestCommand.SEND_CONTROL_COMMAND),
-             null, null, new ControllerCallback(RestCommand.SEND_CONTROL_COMMAND, callback, command), timeout);
+      doRequest(
+              buildRequestUri(
+                      new String[] { Integer.toString(command.getSenderId()), command.getData() },
+                      RestCommand.SEND_CONTROL_COMMAND), null, null, new ControllerCallback(
+                      RestCommand.SEND_CONTROL_COMMAND, callback, command), timeout);
     }
   }
-  
+
   @Override
   public void sendCommand(Command command, String parameter,
           AsyncControllerCallback<CommandResponse> callback) {
@@ -258,19 +255,21 @@ abstract class HttpConnector implements ControllerConnector {
       url += command.getDevice().getName() + "/";
       url += "commands?name=";
       url += command.getName();
-         
+
       URI uri = null;
       try {
         URL urlObject = new URL(url);
-        uri = new URI(urlObject.getProtocol(), urlObject.getUserInfo(), urlObject.getHost(), urlObject.getPort(), urlObject.getPath(), urlObject.getQuery(), urlObject.getRef());
+        uri = new URI(urlObject.getProtocol(), urlObject.getUserInfo(), urlObject.getHost(),
+                urlObject.getPort(), urlObject.getPath(), urlObject.getQuery(), urlObject.getRef());
       } catch (Exception e) {
       }
-      
+
       // Create JSON content
-      String content = parameter != null && !parameter.isEmpty() ? "{\"parameter\": \"" + parameter + "\"}" : null;
-      
-      doRequest(uri, null, content,
-              new ControllerCallback(RestCommand.SEND_NAMED_COMMAND, callback, command), timeout);
+      String content = parameter != null && !parameter.isEmpty() ? "{\"parameter\": \"" + parameter
+              + "\"}" : null;
+
+      doRequest(uri, null, content, new ControllerCallback(RestCommand.SEND_NAMED_COMMAND,
+              callback, command), timeout);
     }
   }
 
@@ -280,7 +279,8 @@ abstract class HttpConnector implements ControllerConnector {
     // Check URL is valid
     if (controllerUrl != null) {
       doRequest(buildRequestUri(new String[] { resourceName }, RestCommand.GET_RESOURCE_DETAILS),
-              null, null, new ControllerCallback(RestCommand.GET_RESOURCE_DETAILS, callback, null), timeout);
+              null, null, new ControllerCallback(RestCommand.GET_RESOURCE_DETAILS, callback, null),
+              timeout);
     }
   }
 
@@ -289,31 +289,33 @@ abstract class HttpConnector implements ControllerConnector {
           AsyncControllerCallback<ResourceDataResponse> callback) {
     // Check URL is valid
     if (controllerUrl != null) {
-      doRequest(buildRequestUri(new String[] { resourceName }, RestCommand.GET_RESOURCE_DATA), null, null,
-              new ControllerCallback(RestCommand.GET_RESOURCE_DATA, callback, resourceName), timeout);
+      doRequest(buildRequestUri(new String[] { resourceName }, RestCommand.GET_RESOURCE_DATA),
+              null, null, new ControllerCallback(RestCommand.GET_RESOURCE_DATA, callback,
+                      resourceName), timeout);
     }
-  }  
+  }
 
   @Override
-  public void startDiscovery(AsyncControllerDiscoveryCallback callback, int tcpPort, Integer searchDuration) {
-    doRequest(null, null, null, new ControllerCallback(RestCommand.DISCOVERY, callback, tcpPort), searchDuration);
+  public void startDiscovery(AsyncControllerDiscoveryCallback callback, int tcpPort,
+          Integer searchDuration) {
+    doRequest(null, null, null, new ControllerCallback(RestCommand.DISCOVERY, callback, tcpPort),
+            searchDuration);
   }
 
   @Override
   public void stopDiscovery() {
     doRequest(null, null, null, new ControllerCallback(RestCommand.STOP_DISCOVERY, null), 0);
   }
-  
-  @Override
-  public void setAutoReconnect(boolean autoReconnect) {
-    this.autoReconnect = autoReconnect;
-  }
 
-  @Override
-  public boolean isAutoReconnect() {
-    return autoReconnect;
-  }
-  
+  // @Override
+  // public void setAutoReconnect(boolean autoReconnect) {
+  // this.autoReconnect = autoReconnect;
+  // }
+  //
+  // @Override
+  // public boolean isAutoReconnect() {
+  // return autoReconnect;
+  // }
 
   // ---------------------------------------------------------------------
   // CALLBACK
@@ -328,7 +330,8 @@ abstract class HttpConnector implements ControllerConnector {
       this(command, callback, null);
     }
 
-    protected ControllerCallback(RestCommand command, AsyncControllerCallback<?> callback, Object data) {
+    protected ControllerCallback(RestCommand command, AsyncControllerCallback<?> callback,
+            Object data) {
       this.command = command;
       this.callback = callback;
       this.data = data;
@@ -339,8 +342,9 @@ abstract class HttpConnector implements ControllerConnector {
   // HELPERS
   // ---------------------------------------------------------------------
 
-  protected abstract void doRequest(URI uri, Map<String, String> headers, String content, final ControllerCallback callback, Integer timeout);
-  
+  protected abstract void doRequest(URI uri, Map<String, String> headers, String content,
+          final ControllerCallback callback, Integer timeout);
+
   // TODO: Provide better handling of failures
   @SuppressWarnings("unchecked")
   protected void handleResponse(ControllerCallback controllerCallback, int responseCode,
@@ -349,7 +353,7 @@ abstract class HttpConnector implements ControllerConnector {
     AsyncControllerCallback<?> callback = controllerCallback.callback;
     Object data = controllerCallback.data;
     String responseStr = null;
-    
+
     if (command != RestCommand.GET_RESOURCE_DATA) {
       try {
         responseStr = responseData != null ? new String(responseData, "UTF-8") : null;
@@ -357,10 +361,9 @@ abstract class HttpConnector implements ControllerConnector {
         e.printStackTrace();
       }
     }
-    
+
     switch (command) {
-    case CONNECT:
-    {
+    case CONNECT: {
       if (responseCode != 200) {
         processError(callback, responseStr);
         return;
@@ -371,8 +374,7 @@ abstract class HttpConnector implements ControllerConnector {
       c.onSuccess(new ControllerConnectionStatus(ControllerResponseCode.OK));
       break;
     }
-    case GET_PANEL_LIST:
-    {
+    case GET_PANEL_LIST: {
       if (responseCode != 200) {
         processError(callback, responseStr);
         return;
@@ -381,8 +383,7 @@ abstract class HttpConnector implements ControllerConnector {
       AsyncControllerCallback<List<PanelInfo>> cPL = (AsyncControllerCallback<List<PanelInfo>>) callback;
       PanelInfoList panelInfoList = null;
       try {
-        panelInfoList = JacksonProcessor.unMarshall(responseStr,
-                PanelInfoList.class);
+        panelInfoList = JacksonProcessor.unMarshall(responseStr, PanelInfoList.class);
       } catch (Exception e) {
         processError(callback, responseStr);
         return;
@@ -390,8 +391,7 @@ abstract class HttpConnector implements ControllerConnector {
       cPL.onSuccess(panelInfoList.getPanelInfos());
       break;
     }
-    case GET_PANEL_LAYOUT:
-    {
+    case GET_PANEL_LAYOUT: {
       if (responseCode != 200) {
         processError(callback, responseStr);
         return;
@@ -405,12 +405,11 @@ abstract class HttpConnector implements ControllerConnector {
         processError(callback, responseStr);
         return;
       }
-      
+
       cPanel.onSuccess(panel);
       break;
     }
-    case GET_DEVICE_LIST:
-    {
+    case GET_DEVICE_LIST: {
       if (responseCode != 200) {
         processError(callback, responseStr);
         return;
@@ -427,8 +426,7 @@ abstract class HttpConnector implements ControllerConnector {
       cDL.onSuccess(deviceList != null ? Arrays.asList(deviceList) : null);
       break;
     }
-    case GET_DEVICE:
-    {
+    case GET_DEVICE: {
       if (responseCode != 200) {
         processError(callback, responseStr);
         return;
@@ -442,12 +440,11 @@ abstract class HttpConnector implements ControllerConnector {
         processError(callback, responseStr);
         return;
       }
-      
+
       cDevice.onSuccess(device);
       break;
     }
-    case SEND_CONTROL_COMMAND:
-    {
+    case SEND_CONTROL_COMMAND: {
       if (responseCode != 200) {
         processError(callback, responseStr);
         return;
@@ -462,8 +459,7 @@ abstract class HttpConnector implements ControllerConnector {
               ControllerResponseCode.OK));
       break;
     }
-    case GET_RESOURCE_DATA:
-    {
+    case GET_RESOURCE_DATA: {
       if (responseCode != 200) {
         try {
           processError(callback, new String(responseData, "UTF-8"));
@@ -473,17 +469,17 @@ abstract class HttpConnector implements ControllerConnector {
         }
         return;
       }
-    
+
       if (data == null || !(data instanceof String)) {
         callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
       }
-    
+
       AsyncControllerCallback<ResourceDataResponse> resourceDataCallback = (AsyncControllerCallback<ResourceDataResponse>) callback;
-      resourceDataCallback.onSuccess(new ResourceDataResponse((String) data, responseData, ControllerResponseCode.OK));
+      resourceDataCallback.onSuccess(new ResourceDataResponse((String) data, responseData,
+              ControllerResponseCode.OK));
       break;
     }
-    case DO_SENSOR_POLLING:
-    {
+    case DO_SENSOR_POLLING: {
       if (responseCode != 200 && responseCode != 504) {
         processError(callback, responseStr);
         return;
@@ -494,11 +490,13 @@ abstract class HttpConnector implements ControllerConnector {
         pollingCallback.onSuccess(null);
       } else {
         try {
-          SensorStatusList sensorStatusList = JacksonProcessor.unMarshall(responseStr, SensorStatusList.class);
+          SensorStatusList sensorStatusList = JacksonProcessor.unMarshall(responseStr,
+                  SensorStatusList.class);
           pollingCallback.onSuccess(getSensorValueMap(sensorStatusList.getStatuses()));
         } catch (Exception e) {
           try {
-            // Controller can return 200 response with JSON Controller error that contains 504 timeout
+            // Controller can return 200 response with JSON Controller error
+            // that contains 504 timeout
             ControllerError error = JacksonProcessor.unMarshall(responseStr, ControllerError.class);
             if (error.getResponse() == ControllerResponseCode.TIME_OUT) {
               pollingCallback.onSuccess(null);
@@ -506,14 +504,13 @@ abstract class HttpConnector implements ControllerConnector {
               processError(callback, responseStr);
             }
           } catch (Exception ex) {
-            processError(callback, responseStr); 
+            processError(callback, responseStr);
           }
         }
       }
       break;
     }
-    case GET_SENSOR_STATUS:
-    {
+    case GET_SENSOR_STATUS: {
       if (responseCode != 200) {
         processError(callback, responseStr);
         return;
@@ -530,8 +527,7 @@ abstract class HttpConnector implements ControllerConnector {
       statusCallback.onSuccess(getSensorValueMap(sensorStatusList.getStatuses()));
       break;
     }
-    case LOGOUT:
-    {
+    case LOGOUT: {
       AsyncControllerCallback<Boolean> logoutCallback = (AsyncControllerCallback<Boolean>) callback;
       if (responseCode == 200 || responseCode == 401) {
         logoutCallback.onSuccess(true);
@@ -540,8 +536,7 @@ abstract class HttpConnector implements ControllerConnector {
       }
       break;
     }
-    case GET_RESOURCE_DETAILS:
-    {
+    case GET_RESOURCE_DETAILS: {
       if (responseCode != 200) {
         processError(callback, responseStr);
         return;
@@ -558,7 +553,8 @@ abstract class HttpConnector implements ControllerConnector {
           contentType = header.getValue();
         } else if (header.getName().equalsIgnoreCase("last-modified")) {
           try {
-            modifiedTime = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz").parse(header.getValue());
+            modifiedTime = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz").parse(header
+                    .getValue());
           } catch (Exception e) {
             // TODO: Log exception
           }
@@ -569,9 +565,8 @@ abstract class HttpConnector implements ControllerConnector {
       resourceCallback.onSuccess(new ResourceInfoDetails(modifiedTime, contentType));
       break;
     }
-    case DISCOVERY:
-    {
-      AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback)callback;
+    case DISCOVERY: {
+      AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback) callback;
       ControllerInfo controllerInfo = null;
       try {
         if (responseStr.indexOf("{") == 0) {
@@ -595,8 +590,7 @@ abstract class HttpConnector implements ControllerConnector {
   private void processError(AsyncControllerCallback<?> callback, String responseData) {
     // Let's see if it's an error response instead
     try {
-      ControllerError error = JacksonProcessor.unMarshall(responseData,
-              ControllerError.class);
+      ControllerError error = JacksonProcessor.unMarshall(responseData, ControllerError.class);
       if (error != null) {
         callback.onFailure(error.getResponse());
       }
@@ -638,14 +632,15 @@ abstract class HttpConnector implements ControllerConnector {
         url = url.endsWith("/") ? url : url + "/";
       }
     }
-    
+
     URI uri = null;
     try {
       URL urlObject = new URL(url);
-      uri = new URI(urlObject.getProtocol(), urlObject.getUserInfo(), urlObject.getHost(), urlObject.getPort(), urlObject.getPath(), urlObject.getQuery(), urlObject.getRef());
+      uri = new URI(urlObject.getProtocol(), urlObject.getUserInfo(), urlObject.getHost(),
+              urlObject.getPort(), urlObject.getPath(), urlObject.getQuery(), urlObject.getRef());
     } catch (Exception e) {
     }
-    
+
     return uri;
   }
 }

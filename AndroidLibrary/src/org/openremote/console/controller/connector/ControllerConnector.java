@@ -23,8 +23,6 @@ package org.openremote.console.controller.connector;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-
 import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.console.controller.ControllerConnectionStatus;
 import org.openremote.console.controller.auth.Credentials;
@@ -50,7 +48,7 @@ import org.openremote.entities.controller.DeviceInfo;
  */
 public interface ControllerConnector extends CommandSender, ResourceLocator {
   public static final int DEFAULT_TIMEOUT = 5000;
-  
+
   /**
    * Sets the controller URL
    * 
@@ -61,19 +59,20 @@ public interface ControllerConnector extends CommandSender, ResourceLocator {
   /**
    * Gets the controller URL
    * 
-   * @return
+   * @return controller {@link URL}
    */
   URL getControllerUrl();
-  
+
   /**
    * Gets the unique controller identity
-   * @return
+   * 
+   * @return controller identity
    */
   String getControllerIdentity();
 
   /**
-   * Sets the {@link org.openremote.console.controller.auth.Credentials} to be used
-   * by this connector
+   * Sets the {@link org.openremote.console.controller.auth.Credentials} to be
+   * used by this connector
    * 
    * @param credentials
    */
@@ -81,27 +80,29 @@ public interface ControllerConnector extends CommandSender, ResourceLocator {
 
   /**
    * Set the timeout in milliseconds for this connector
+   * 
    * @param timeout
    */
   void setTimeout(int timeout);
-  
+
   /**
    * Get the timeout in milliseconds for this connector
-   * @return
+   * 
+   * @return connector timeout in milliseconds
    */
   int getTimeout();
-  
+
   /**
    * Returns the currently active credentials
    * 
-   * @return
+   * @return currently active {@link Credentials}
    */
   Credentials getCredentials();
 
   /**
    * Indicates if the connector is currently connected to the controller
    * 
-   * @return
+   * @return is connector connected
    */
   boolean isConnected();
 
@@ -115,15 +116,18 @@ public interface ControllerConnector extends CommandSender, ResourceLocator {
   void connect(AsyncControllerCallback<ControllerConnectionStatus> callback);
 
   /**
-   * Disconnects from the controller asynchronously; does nothing if not already connected.
-   * When disconnect is completed the onFailure method of the connect callback will be
-   * called with a ControllerResponseCode of {@value org.openremote.entities.controller.ControllerResponseCode.DISCONNECTED}. 
+   * Disconnects from the controller asynchronously; does nothing if not already
+   * connected. When disconnect is completed the onFailure method of the connect
+   * callback will be called with a ControllerResponseCode of
+   * {@link org.openremote.entities.controller.ControllerResponseCode#DISCONNECTED}
+   * .
    */
   void disconnect();
 
   /**
-   * Returns {@link java.util.List<org.openremote.entities.panel.PanelInfo>} of
-   * panels that are recognised by this controller.
+   * Returns {@link java.util.List} of
+   * {@link org.openremote.entities.panel.PanelInfo} of panels that are
+   * recognised by this controller.
    * 
    * @param callback
    *          {@link AsyncControllerCallback} callback for handling the response
@@ -153,8 +157,10 @@ public interface ControllerConnector extends CommandSender, ResourceLocator {
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
    */
-  void sendControlCommand(ControlCommand command, AsyncControllerCallback<ControlCommandResponse> callback);
-  
+  @Override
+  void sendControlCommand(ControlCommand command,
+          AsyncControllerCallback<ControlCommandResponse> callback);
+
   /**
    * Returns {@link Boolean} indicating whether command send request was
    * successful.
@@ -167,21 +173,25 @@ public interface ControllerConnector extends CommandSender, ResourceLocator {
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
    */
-  void sendCommand(Command command, String parameter, AsyncControllerCallback<CommandResponse> callback);
+  @Override
+  void sendCommand(Command command, String parameter,
+          AsyncControllerCallback<CommandResponse> callback);
 
   /**
    * Returns Map<Integer, String> of sensor IDs and values only for sensors
    * whose values have changed since the last request.
    * 
    * @param uuid
-   *          Unique identifier for this monitor request to allow tracking between sensor polls
+   *          Unique identifier for this monitor request to allow tracking
+   *          between sensor polls
    * @param sensorIds
    *          List of sensor IDs to monitor
    * @param callback
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
    */
-  void monitorSensors(String uuid, List<Integer> sensorIds, AsyncControllerCallback<Map<Integer, String>> callback);
+  void monitorSensors(String uuid, List<Integer> sensorIds,
+          AsyncControllerCallback<Map<Integer, String>> callback);
 
   /**
    * Returns Map<Integer, String> of sensor IDs and values. *
@@ -192,7 +202,8 @@ public interface ControllerConnector extends CommandSender, ResourceLocator {
    *          {@link AsyncControllerCallback} callback for handling the response
    *          asynchronously
    */
-  void getSensorValues(List<Integer> sensorIds, AsyncControllerCallback<Map<Integer, String>> callback);
+  void getSensorValues(List<Integer> sensorIds,
+          AsyncControllerCallback<Map<Integer, String>> callback);
 
   /**
    * Logs out of the controller. *
@@ -202,32 +213,36 @@ public interface ControllerConnector extends CommandSender, ResourceLocator {
    *          asynchronously
    */
   void logout(AsyncControllerCallback<Boolean> callback);
-  
+
   /**
-   * Perform controller discovery for the specified period of time using the specified TCP port
-   * and call onDiscoveryStarted, if discovery cannot be started then call onStartDiscoveryFailed.
-   * When a new controller is discovered call onControllerFound.
+   * Perform controller discovery for the specified period of time using the
+   * specified TCP port and call onDiscoveryStarted, if discovery cannot be
+   * started then call onStartDiscoveryFailed. When a new controller is
+   * discovered call onControllerFound.
+   * 
    * @param callback
    * @param tcpPort
    * @param searchDuration
    */
   void startDiscovery(AsyncControllerDiscoveryCallback callback, int tcpPort, Integer searchDuration);
-  
+
   /**
-   * Stop current controller discovery and call onDiscoveryStopped of callback provided at startDiscovery
-   * @param callback
+   * Stop current controller discovery and call onDiscoveryStopped of callback
+   * provided at startDiscovery
    */
   void stopDiscovery();
-  
+
   /**
    * Determines if controller discovery is currently running
-   * @return
+   * 
+   * @return is discovery running
    */
   boolean isDiscoveryRunning();
 
   /**
-   * Returns {@link java.util.List<org.openremote.entities.controller.DeviceInfo>} of
-   * devices that are recognised by this controller.
+   * Returns {@link java.util.List} of
+   * {@link org.openremote.entities.controller.DeviceInfo} of devices that are
+   * recognised by this controller.
    * 
    * @param callback
    *          {@link AsyncControllerCallback} callback for handling the response
@@ -236,24 +251,27 @@ public interface ControllerConnector extends CommandSender, ResourceLocator {
   void getDeviceList(AsyncControllerCallback<List<DeviceInfo>> callback);
 
   /**
-   * Returns {@link org.openremote.entities.controller.Device} that matches
-   * the supplied device name.
+   * Returns {@link org.openremote.entities.controller.Device} that matches the
+   * supplied device name.
+   * 
    * @param deviceName
    * @param callback
    */
   void getDevice(String deviceName, AsyncControllerCallback<Device> callback);
-  
-  /**
-   * Sets whether the connector should automatically try to re-establish connection
-   * when a connection error occurs.
-   * @param autoReconnect
-   */
-  void setAutoReconnect(boolean autoReconnect);
-  
-  /**
-   * Indicates whether the connector will automatically try to re-establish connection
-   * when a connection error occurs.
-   * @return
-   */
-  boolean isAutoReconnect();
+  //
+  // /**
+  // * Sets whether the connector should automatically try to re-establish
+  // connection
+  // * when a connection error occurs.
+  // * @param autoReconnect
+  // */
+  // void setAutoReconnect(boolean autoReconnect);
+  //
+  // /**
+  // * Indicates whether the connector will automatically try to re-establish
+  // connection
+  // * when a connection error occurs.
+  // * @return
+  // */
+  // boolean isAutoReconnect();
 }

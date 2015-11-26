@@ -22,8 +22,9 @@ package org.openremote.console.controller.auth;
 
 /**
  * Simple interface for storing username and password credentials
+ * 
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
- *
+ * 
  */
 public interface Credentials {
   public String getUsername();

@@ -11,12 +11,12 @@ import org.openremote.entities.controller.Sensor;
 public class DeviceRegistrationHandle extends RegistrationHandle {
   private Device device;
   private List<Integer> sensorIds;
-  
+
   DeviceRegistrationHandle(Device device, AsyncRegistrationCallback callback) {
     super(callback);
     this.device = device;
   }
-  
+
   public Device getDevice() {
     return device;
   }
@@ -39,7 +39,7 @@ public class DeviceRegistrationHandle extends RegistrationHandle {
     if (sensorIds == null) {
       sensorIds = new ArrayList<Integer>();
       if (device.getSensors() != null) {
-        for(Sensor sensor : device.getSensors()) {
+        for (Sensor sensor : device.getSensors()) {
           sensorIds.add(sensor.getId());
         }
       }

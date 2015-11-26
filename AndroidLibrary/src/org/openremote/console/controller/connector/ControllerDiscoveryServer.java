@@ -1,22 +1,22 @@
 /* OpenRemote, the Home of the Digital Home.
-* Copyright 2008-2014, OpenRemote Inc.
-*
-* See the contributors.txt file in the distribution for a
-* full listing of individual contributors.
-*
-* This program is free software: you can redistribute it and/or modify
-* it under the terms of the GNU Affero General Public License as
-* published by the Free Software Foundation, either version 3 of the
-* License, or (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU Affero General Public License for more details.
-*
-* You should have received a copy of the GNU Affero General Public License
-* along with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright 2008-2014, OpenRemote Inc.
+ *
+ * See the contributors.txt file in the distribution for a
+ * full listing of individual contributors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.openremote.console.controller.connector;
 
 import java.io.IOException;
@@ -28,8 +28,9 @@ import com.loopj.android.http.ResponseHandlerInterface;
 
 /**
  * This class is the main manager of the discovery process.
+ * 
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
- *
+ * 
  */
 class ControllerDiscoveryServer extends Thread {
   private final ResponseHandlerInterface responseHandler;
@@ -41,33 +42,35 @@ class ControllerDiscoveryServer extends Thread {
   private Integer duration;
   private int pauseTime = 1000;
   private ControllerDiscoveryReceiver receiver;
-  
+
   ControllerDiscoveryServer(int tcpPort, Integer duration, ResponseHandlerInterface responseHandler) {
     this.tcpPort = tcpPort;
     this.duration = duration;
     this.responseHandler = responseHandler;
   }
-  
+
+  @Override
   public void run() {
     cancelled = false;
-    
+
     // Try and start the receiver
     try {
       receiver = new ControllerDiscoveryReceiver(responseHandler, tcpPort);
       receiver.start();
-    
+
       // Notify start
       responseHandler.sendStartMessage();
-    
-      // Start the multicast   
-      while(!cancelled) {
+
+      // Start the multicast
+      while (!cancelled) {
         // Send UDP packet at increasing time interval up to 60s
         if (elapsedTime % pauseTime == 0) {
-          try {        
+          try {
             DatagramSocket socket = new DatagramSocket();
             byte[] b = new byte[512];
             DatagramPacket dgram;
-            dgram = new DatagramPacket(b, b.length, InetAddress.getByName(MULTICAST_ADDRESS), MULTICAST_PORT);
+            dgram = new DatagramPacket(b, b.length, InetAddress.getByName(MULTICAST_ADDRESS),
+                    MULTICAST_PORT);
             socket.send(dgram);
             socket.close();
           } catch (Exception e) {
@@ -76,13 +79,13 @@ class ControllerDiscoveryServer extends Thread {
             pauseTime *= 2;
           }
         }
-        
+
         elapsedTime += 1000;
-        
+
         if (duration != null && elapsedTime > duration) {
           break;
         }
-        
+
         // Sleep
         try {
           Thread.sleep(1000);
@@ -90,12 +93,12 @@ class ControllerDiscoveryServer extends Thread {
           cancelled = true;
         }
       }
-      
+
       // Notify finish
       responseHandler.sendFinishMessage();
-    
+
     } catch (IOException e) {
-      // Notify start failure 
+      // Notify start failure
       responseHandler.sendFailureMessage(0, null, null, e);
       return;
     } finally {
@@ -105,7 +108,7 @@ class ControllerDiscoveryServer extends Thread {
       }
     }
   }
-  
+
   void cancel() {
     cancelled = true;
     this.interrupt();

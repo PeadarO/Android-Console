@@ -22,12 +22,13 @@ package org.openremote.console.controller;
 
 /**
  * Simple exception definition for connection exceptions
+ * 
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
- *
+ * 
  */
 public class ConnectionException extends Exception {
   private static final long serialVersionUID = 5206350896312447990L;
-  
+
   ConnectionException(String message) {
     super(message);
   }

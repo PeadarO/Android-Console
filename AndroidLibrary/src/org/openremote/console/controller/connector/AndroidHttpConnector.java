@@ -43,42 +43,43 @@ import com.loopj.android.http.AsyncHttpResponseHandler;
 import com.loopj.android.http.ResponseHandlerInterface;
 
 /**
- * Android specific connector capable of calling callback on the UI thread
- * via the Android Looper Handler
+ * Android specific connector capable of calling callback on the UI thread via
+ * the Android Looper Handler
  * 
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  */
 public class AndroidHttpConnector extends HttpConnector {
   private static final int HEARTBEAT_PERIOD = 10000;
   private final CustomAsyncHttpClient client = new CustomAsyncHttpClient();
-  //private Timer heartBeatTimer;
+  // private Timer heartBeatTimer;
   private AsyncControllerCallback<ControllerConnectionStatus> connectCallback;
-  
+
   public AndroidHttpConnector() {
     client.addHeader("Accept", "application/json");
     client.setTimeout(getTimeout());
   }
 
   @Override
-  protected void doRequest(URI uri, Map<String, String> headers, String content, final ControllerCallback callback, Integer timeout) {
+  protected void doRequest(URI uri, Map<String, String> headers, String content,
+          final ControllerCallback callback, Integer timeout) {
     if (callback.command == RestCommand.DISCOVERY) {
       ResponseHandlerInterface handler = new AsyncHttpResponseHandler() {
         @Override
         public void onStart() {
           // Called when discovery is started
-          AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback)callback.callback; 
-          
+          AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback) callback.callback;
+
           discoveryCallback.onDiscoveryStarted();
         }
-        
+
         @Override
         public void onFinish() {
           // This will be called when discovery is stopped
-          AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback)callback.callback; 
-          
+          AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback) callback.callback;
+
           discoveryCallback.onDiscoveryStopped();
         }
-        
+
         @Override
         public void onSuccess(int code, Header[] headers, byte[] response) {
           // Called each time a controller is discovered
@@ -88,37 +89,36 @@ public class AndroidHttpConnector extends HttpConnector {
         @Override
         public void onFailure(int arg0, Header[] arg1, byte[] arg2, Throwable arg3) {
           // Called when discovery cannot be started
-          AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback)callback.callback; 
-          
+          AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback) callback.callback;
+
           discoveryCallback.onStartDiscoveryFailed(ControllerResponseCode.UNKNOWN_ERROR);
         }
       };
-      
+
       int tcpPort = (Integer) callback.data;
       client.startDiscovery(tcpPort, timeout, handler);
       return;
     }
-    
+
     if (callback.command == RestCommand.STOP_DISCOVERY) {
       client.stopDiscovery();
       return;
     }
-    
+
     if (callback.command == RestCommand.DISCONNECT) {
-//      if (heartBeatTimer != null) {
-//        heartBeatTimer.cancel();
-//        heartBeatTimer = null;
-//      }
-      
+      // if (heartBeatTimer != null) {
+      // heartBeatTimer.cancel();
+      // heartBeatTimer = null;
+      // }
+
       // Terminate any open polling connections
       client.cancelAllRequests(true);
-      
-      
+
       if (connectCallback != null) {
         connectCallback.onFailure(ControllerResponseCode.DISCONNECTED);
         connectCallback = null;
       }
-      
+
       return;
     }
 
@@ -132,9 +132,9 @@ public class AndroidHttpConnector extends HttpConnector {
 
       @Override
       public void onCancel() {
-        
+
       }
-      
+
       @Override
       public void onSuccess(int code, Header[] headers, byte[] response) {
         if (callback.command == RestCommand.LOGOUT) {
@@ -144,71 +144,76 @@ public class AndroidHttpConnector extends HttpConnector {
 
         if (callback.command == RestCommand.CONNECT) {
           connectCallback = (AsyncControllerCallback<ControllerConnectionStatus>) callback.callback;
-          
-//          // Create AsyncHttpResponseHandler to pass messages back to UI Thread
-//          // this means we have no compile time dependency on Android
-//          final AsyncHttpResponseHandler heartBeatCallback = new AsyncHttpResponseHandler() {
-//            @Override
-//            public boolean getUseSynchronousMode() {
-//                return true;
-//            }
-//            
-//            @Override
-//            public void onFailure(int arg0, Header[] arg1, byte[] arg2, Throwable arg3) {
-//              // Call connect callback onFailure with NO_RESPONSE
-//              connectCallback.onFailure(ControllerResponseCode.NO_RESPONSE);
-//            }
-//
-//            @Override
-//            public void onSuccess(int arg0, Header[] arg1, byte[] arg2) {
-//              connectCallback.onSuccess(new ControllerConnectionStatus(ControllerResponseCode.OK));              
-//            }
-//          };
-//          
-//          // Start heartbeat task
-//          final TimerTask task = new TimerTask() {
-//            
-//            @Override
-//            public void run() {
-//              getPanelList(new AsyncControllerCallback<List<PanelInfo>>() {
-//                @Override
-//                public void onSuccess(List<PanelInfo> result) {
-//                  if (!isConnected()) {
-//                    heartBeatCallback.sendSuccessMessage(200, null, null);
-//                  }
-//                }
-//                
-//                @Override
-//                public void onFailure(ControllerResponseCode error) {
-//                  // Cancel heartbeat if auto-reconnect is disabled
-//                  if (!isAutoReconnect()) {
-//                    heartBeatTimer.cancel();
-//                  }
-//                  
-//                  heartBeatCallback.sendFailureMessage(404, null, null, null);
-//                }           
-//              });
-//              
-//            }
-//          };
-//          
-//          heartBeatTimer = new Timer();
-//          heartBeatTimer.schedule(task, HEARTBEAT_PERIOD, HEARTBEAT_PERIOD);
+
+          // // Create AsyncHttpResponseHandler to pass messages back to UI
+          // Thread
+          // // this means we have no compile time dependency on Android
+          // final AsyncHttpResponseHandler heartBeatCallback = new
+          // AsyncHttpResponseHandler() {
+          // @Override
+          // public boolean getUseSynchronousMode() {
+          // return true;
+          // }
+          //
+          // @Override
+          // public void onFailure(int arg0, Header[] arg1, byte[] arg2,
+          // Throwable arg3) {
+          // // Call connect callback onFailure with NO_RESPONSE
+          // connectCallback.onFailure(ControllerResponseCode.NO_RESPONSE);
+          // }
+          //
+          // @Override
+          // public void onSuccess(int arg0, Header[] arg1, byte[] arg2) {
+          // connectCallback.onSuccess(new
+          // ControllerConnectionStatus(ControllerResponseCode.OK));
+          // }
+          // };
+          //
+          // // Start heartbeat task
+          // final TimerTask task = new TimerTask() {
+          //
+          // @Override
+          // public void run() {
+          // getPanelList(new AsyncControllerCallback<List<PanelInfo>>() {
+          // @Override
+          // public void onSuccess(List<PanelInfo> result) {
+          // if (!isConnected()) {
+          // heartBeatCallback.sendSuccessMessage(200, null, null);
+          // }
+          // }
+          //
+          // @Override
+          // public void onFailure(ControllerResponseCode error) {
+          // // Cancel heartbeat if auto-reconnect is disabled
+          // if (!isAutoReconnect()) {
+          // heartBeatTimer.cancel();
+          // }
+          //
+          // heartBeatCallback.sendFailureMessage(404, null, null, null);
+          // }
+          // });
+          //
+          // }
+          // };
+          //
+          // heartBeatTimer = new Timer();
+          // heartBeatTimer.schedule(task, HEARTBEAT_PERIOD, HEARTBEAT_PERIOD);
         }
-        
+
         handleResponse(callback, code, headers, response);
       }
 
       @Override
       public void onFailure(int arg0, Header[] arg1, byte[] arg2, Throwable exception) {
-        if (callback.command == RestCommand.DO_SENSOR_POLLING && exception.getCause() instanceof ConnectTimeoutException) {
+        if (callback.command == RestCommand.DO_SENSOR_POLLING
+                && exception.getCause() instanceof ConnectTimeoutException) {
           callback.callback.onSuccess(null);
         } else {
           callback.callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
         }
-      }      
+      }
     };
-    
+
     if (doHead) {
       client.setTimeout(timeout);
       try {
@@ -219,17 +224,17 @@ public class AndroidHttpConnector extends HttpConnector {
     } else {
       StringEntity entity = null;
       Header[] headerArr = null;
-      
+
       if (headers != null) {
         List<Header> headerList = new ArrayList<Header>();
-        
-        for (Entry<String,String> entry : headers.entrySet()) {
+
+        for (Entry<String, String> entry : headers.entrySet()) {
           headerList.add(new BasicHeader(entry.getKey(), entry.getValue()));
         }
-        
+
         headerArr = headerList.toArray(new Header[0]);
       }
-      
+
       if (content != null) {
         try {
           entity = new StringEntity(content);
@@ -239,7 +244,7 @@ public class AndroidHttpConnector extends HttpConnector {
           return;
         }
       }
-      
+
       client.setTimeout(timeout);
       try {
         client.post(null, uri.toURL().toString(), headerArr, entity, "application/json", handler);
@@ -248,29 +253,28 @@ public class AndroidHttpConnector extends HttpConnector {
       }
     }
   }
-  
+
   @Override
   public void setCredentials(Credentials credentials) {
     this.credentials = credentials;
-    
+
     client.clearCredentialsProvider();
 
     if (credentials != null) {
       client.setBasicAuth(credentials.getUsername(), credentials.getPassword());
     }
   }
-  
+
   @Override
   public void logout(AsyncControllerCallback<Boolean> callback) {
     credentials = null;
-    
+
     if (controllerUrl != null) {
-      doRequest(buildRequestUri(RestCommand.LOGOUT), null, null, new ControllerCallback(RestCommand.LOGOUT, callback),
-getTimeout());
-    }
-    else {
+      doRequest(buildRequestUri(RestCommand.LOGOUT), null, null, new ControllerCallback(
+              RestCommand.LOGOUT, callback), getTimeout());
+    } else {
       callback.onSuccess(true);
-    }      
+    }
   }
 
   @Override

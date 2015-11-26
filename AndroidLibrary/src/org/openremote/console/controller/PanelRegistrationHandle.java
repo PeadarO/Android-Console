@@ -14,7 +14,7 @@ public class PanelRegistrationHandle extends RegistrationHandle {
   private Panel panel;
   private List<Integer> sensorIds;
   private List<SensoryWidget> monitoredWidgets;
-  
+
   PanelRegistrationHandle(Panel panel, AsyncRegistrationCallback callback) {
     super(callback);
     this.panel = panel;
@@ -26,12 +26,12 @@ public class PanelRegistrationHandle extends RegistrationHandle {
 
   @Override
   public List<Integer> getSensorIds() {
-    if(sensorIds == null) {
+    if (sensorIds == null) {
       // Get sensor and widget info
       List<Widget> widgets = panel.getWidgets();
       monitoredWidgets = new ArrayList<SensoryWidget>();
       sensorIds = new ArrayList<Integer>();
-  
+
       // Get sensory widgets first
       if (widgets != null) {
         for (Widget widget : widgets) {
@@ -46,7 +46,7 @@ public class PanelRegistrationHandle extends RegistrationHandle {
         }
       }
     }
-    
+
     return sensorIds;
   }
 
