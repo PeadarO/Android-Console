@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Future;
 
 import org.apache.http.Header;
 import org.apache.http.conn.ConnectTimeoutException;
@@ -49,7 +50,6 @@ import com.loopj.android.http.ResponseHandlerInterface;
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  */
 public class AndroidHttpConnector extends HttpConnector {
-  private static final int HEARTBEAT_PERIOD = 10000;
   private final CustomAsyncHttpClient client = new CustomAsyncHttpClient();
   // private Timer heartBeatTimer;
   private AsyncControllerCallback<ControllerConnectionStatus> connectCallback;
@@ -57,6 +57,18 @@ public class AndroidHttpConnector extends HttpConnector {
   public AndroidHttpConnector() {
     client.addHeader("Accept", "application/json");
     client.setTimeout(getTimeout());
+  }
+  
+  private void doDisconnect() {
+    // Terminate any open polling connections
+    client.cancelAllRequests(true);
+
+    connected = false;
+    
+    if (connectCallback != null) {
+      connectCallback.onFailure(ControllerResponseCode.DISCONNECTED);
+      connectCallback = null;
+    }
   }
 
   @Override
@@ -106,19 +118,7 @@ public class AndroidHttpConnector extends HttpConnector {
     }
 
     if (callback.command == RestCommand.DISCONNECT) {
-      // if (heartBeatTimer != null) {
-      // heartBeatTimer.cancel();
-      // heartBeatTimer = null;
-      // }
-
-      // Terminate any open polling connections
-      client.cancelAllRequests(true);
-
-      if (connectCallback != null) {
-        connectCallback.onFailure(ControllerResponseCode.DISCONNECTED);
-        connectCallback = null;
-      }
-
+      doDisconnect();
       return;
     }
 
@@ -144,60 +144,6 @@ public class AndroidHttpConnector extends HttpConnector {
 
         if (callback.command == RestCommand.CONNECT) {
           connectCallback = (AsyncControllerCallback<ControllerConnectionStatus>) callback.callback;
-
-          // // Create AsyncHttpResponseHandler to pass messages back to UI
-          // Thread
-          // // this means we have no compile time dependency on Android
-          // final AsyncHttpResponseHandler heartBeatCallback = new
-          // AsyncHttpResponseHandler() {
-          // @Override
-          // public boolean getUseSynchronousMode() {
-          // return true;
-          // }
-          //
-          // @Override
-          // public void onFailure(int arg0, Header[] arg1, byte[] arg2,
-          // Throwable arg3) {
-          // // Call connect callback onFailure with NO_RESPONSE
-          // connectCallback.onFailure(ControllerResponseCode.NO_RESPONSE);
-          // }
-          //
-          // @Override
-          // public void onSuccess(int arg0, Header[] arg1, byte[] arg2) {
-          // connectCallback.onSuccess(new
-          // ControllerConnectionStatus(ControllerResponseCode.OK));
-          // }
-          // };
-          //
-          // // Start heartbeat task
-          // final TimerTask task = new TimerTask() {
-          //
-          // @Override
-          // public void run() {
-          // getPanelList(new AsyncControllerCallback<List<PanelInfo>>() {
-          // @Override
-          // public void onSuccess(List<PanelInfo> result) {
-          // if (!isConnected()) {
-          // heartBeatCallback.sendSuccessMessage(200, null, null);
-          // }
-          // }
-          //
-          // @Override
-          // public void onFailure(ControllerResponseCode error) {
-          // // Cancel heartbeat if auto-reconnect is disabled
-          // if (!isAutoReconnect()) {
-          // heartBeatTimer.cancel();
-          // }
-          //
-          // heartBeatCallback.sendFailureMessage(404, null, null, null);
-          // }
-          // });
-          //
-          // }
-          // };
-          //
-          // heartBeatTimer = new Timer();
-          // heartBeatTimer.schedule(task, HEARTBEAT_PERIOD, HEARTBEAT_PERIOD);
         }
 
         handleResponse(callback, code, headers, response);

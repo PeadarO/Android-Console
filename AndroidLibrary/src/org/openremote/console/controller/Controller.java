@@ -29,8 +29,10 @@ import java.util.Map;
 import org.openremote.console.controller.auth.Credentials;
 import org.openremote.console.controller.connector.AndroidHttpConnector;
 import org.openremote.console.controller.connector.ControllerConnector;
+import org.openremote.console.controller.connector.SingleThreadHttpConnector;
 import org.openremote.entities.panel.*;
 import org.openremote.entities.controller.AsyncControllerCallback;
+import org.openremote.entities.controller.Command;
 import org.openremote.entities.controller.ControllerInfo;
 import org.openremote.entities.controller.ControllerResponseCode;
 import org.openremote.entities.controller.Device;
@@ -52,64 +54,100 @@ public class Controller {
   private ControllerInfo controllerInfo;
   private List<DeviceRegistrationHandle> registeredDevices = new ArrayList<DeviceRegistrationHandle>();
   private List<PanelRegistrationHandle> registeredPanels = new ArrayList<PanelRegistrationHandle>();
-  private static Class<?> connectorClazz = AndroidHttpConnector.class;
+  private static Class<?> connectorClazz = SingleThreadHttpConnector.class;
 
-  /**
-   * Create a controller from the specified string URL
-   * 
-   * @param url
-   * @throws ConnectionException
-   */
-  public Controller(String url) {
-    this(url, null);
-  }
-
-  /**
-   * Create a controller from the specified string URL using the specified
-   * {@link org.openremote.console.controller.auth.Credentials} for the
-   * connection
-   * 
-   * @param url
-   * @param credentials
-   */
-  public Controller(String url, Credentials credentials) {
-    this(new ControllerInfo(url), credentials);
-  }
-
-  /**
-   * Create a controller from the specified
-   * {@link org.openremote.entities.controller.ControllerInfo}
-   * 
-   * @param controllerInfo
-   * @throws ConnectionException
-   */
-  public Controller(ControllerInfo controllerInfo) {
-    this(controllerInfo, null);
-  }
-
-  /**
-   * Create a controller from the specified
-   * {@link org.openremote.entities.controller.ControllerInfo} using the
-   * specified {@link org.openremote.console.controller.auth.Credentials} for
-   * the connection
-   * 
-   * @param controllerInfo
-   * @param credentials
-   * @throws ConnectionException
-   */
-  public Controller(ControllerInfo controllerInfo, Credentials credentials) {
-    try {
-      connector = (ControllerConnector) connectorClazz.newInstance();
-    } catch (InstantiationException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (IllegalAccessException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+  public static class Builder {
+    Credentials credentials;
+    ControllerInfo controllerInfo;
+    ControllerConnector connector;
+    
+    public Builder(String url) {
+      this(new ControllerInfo(url));
     }
-    setControllerInfo(controllerInfo);
-    setCredentials(credentials);
-    connector.setTimeout(getTimeout());
+    
+    public Builder(ControllerInfo controllerInfo) {
+      this.controllerInfo = controllerInfo;
+    }
+    
+    public Builder setCredentials(Credentials credentials) {
+      this.credentials = credentials;
+      return this;
+    }
+    
+    public Builder setConnector(ControllerConnector connector) {
+      this.connector = connector;
+      return this;
+    }
+    
+    public Controller build() {
+      Controller controller = new Controller(getConnector());
+      controller.setCredentials(credentials);
+      controller.setControllerInfo(controllerInfo);
+      return controller;
+    }
+    
+    protected ControllerConnector getConnector() {
+      if (connector != null) {
+        return connector;
+      }
+
+      try {
+        connector = (ControllerConnector) connectorClazz.newInstance();
+      } catch (InstantiationException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      } catch (IllegalAccessException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+      return connector;
+    }
+  }
+  
+  public static class WidgetCommandInfo<T> {
+    public WidgetCommandInfo(Class<T> dataType) {
+      this.dataType = dataType;
+    }
+    
+    String widgetType;
+    int commandId1;
+    int commandId2;
+    int sensorId;
+    Class<T> dataType;
+    public String getWidgetType() {
+      return widgetType;
+    }
+    public void setWidgetType(String widgetType) {
+      this.widgetType = widgetType;
+    }
+    public int getCommandId1() {
+      return commandId1;
+    }
+    public void setCommandId1(int commandId1) {
+      this.commandId1 = commandId1;
+    }
+    public int getCommandId2() {
+      return commandId2;
+    }
+    public void setCommandId2(int commandId2) {
+      this.commandId2 = commandId2;
+    }
+    public int getSensorId() {
+      return sensorId;
+    }
+    public void setSensorId(int sensorId) {
+      this.sensorId = sensorId;
+    }
+    public Class<T> getDataType() {
+      return dataType;
+    }
+    public void setDataType(Class<T> dataType) {
+      this.dataType = dataType;
+    }
+  }
+  
+  protected Controller(ControllerConnector connector) {
+    this.connector = connector;
   }
 
   public static void setConnectorType(Class<?> connectorClass) {
@@ -285,27 +323,31 @@ public class Controller {
     return registration;
   }
 
-  private void doRegistration(final RegistrationHandle registration, final boolean firstRun) {
+  protected void doRegistration(final RegistrationHandle registration, final boolean firstRun) {
     final List<Integer> sensorIds = registration.getSensorIds();
     final AsyncControllerCallback<Map<Integer, String>> monitorCallback = new AsyncControllerCallback<Map<Integer, String>>() {
+      
       @Override
       public void onFailure(ControllerResponseCode error) {
         if (firstRun) {
           // Pass error back to registration callback
           registration.getCallback().onFailure(error);
+        } else if (isConnected() && registration.isRegistered()) {
+          monitorSensors(registration);
         }
       }
 
       @Override
       public void onSuccess(Map<Integer, String> result) {
-        // Pass through to registration handle
-        registration.onSensorsChanged(result);
         if (firstRun) {
           registration.getCallback().onSuccess();
         }
 
-        if (isConnected() && registration.isRegistered()) {
-          monitorSensors(registration);
+        if (registration.isRegistered()) {
+          registration.onSensorsChanged(result);
+          if (isConnected()) {
+            monitorSensors(registration);
+          }
         }
       }
     };
@@ -321,23 +363,29 @@ public class Controller {
     }
   }
 
-  private void monitorSensors(final RegistrationHandle registration) {
+  protected void monitorSensors(final RegistrationHandle registration) {
     final List<Integer> sensorIds = registration.getSensorIds();
     final AsyncControllerCallback<Map<Integer, String>> monitorCallback = new AsyncControllerCallback<Map<Integer, String>>() {
       @Override
       public void onFailure(ControllerResponseCode error) {
         // Pass error back to registration callback
         registration.getCallback().onFailure(error);
+        
+        if (isConnected() && registration.isRegistered()) {
+          monitorSensors(registration);
+        }
       }
 
       @Override
       public void onSuccess(Map<Integer, String> result) {
-        if (isConnected() && registration.isRegistered()) {
+        if (registration.isRegistered()) {
           if (result != null) {
             // Pass through to registration handle
             registration.onSensorsChanged(result);
           }
-          monitorSensors(registration);
+          if (isConnected()) {
+            monitorSensors(registration);
+          }
         }
       }
     };
@@ -421,7 +469,7 @@ public class Controller {
    * 
    * @param url
    */
-  private void setControllerInfo(ControllerInfo controllerInfo) {
+  protected void setControllerInfo(ControllerInfo controllerInfo) {
     if (!isConnected()) {
       this.controllerInfo = controllerInfo;
     }
@@ -547,7 +595,16 @@ public class Controller {
   public void getDevice(String deviceName, AsyncControllerCallback<Device> callback) {
     connector.getDevice(deviceName, callback);
   }
+  
+//  public void getDevices(List<String> deviceNames, AsyncControllerCallback<List<Device>> callback) {
+//    connector.getDevices(deviceNames, callback);
+//  }
 
+
+  public void getWidgetsCommandsInfo(AsyncControllerCallback<List<WidgetCommandInfo>> callback) {
+    connector.getWidgetsCommandInfo(callback);
+  } 
+  
   /**
    * Logout from the controller (i.e. remove current credentials)
    * 

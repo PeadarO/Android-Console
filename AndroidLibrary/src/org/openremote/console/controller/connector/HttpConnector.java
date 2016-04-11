@@ -20,17 +20,25 @@
  */
 package org.openremote.console.controller.connector;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.apache.http.Header;
 import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
+import org.openremote.console.controller.Controller;
 import org.openremote.console.controller.ControllerConnectionStatus;
 import org.openremote.console.controller.auth.Credentials;
 import org.openremote.entities.panel.Panel;
@@ -51,6 +59,12 @@ import org.openremote.entities.controller.DeviceInfo;
 import org.openremote.entities.controller.PanelInfoList;
 import org.openremote.entities.controller.SensorStatus;
 import org.openremote.entities.controller.SensorStatusList;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 /**
  * Base class for HTTP connector implementations. This uses the HTTP REST API
@@ -59,8 +73,8 @@ import org.openremote.entities.controller.SensorStatusList;
  * 
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  */
-abstract class HttpConnector implements ControllerConnector {
-  protected enum RestCommand {
+public abstract class HttpConnector implements ControllerConnector {
+  public enum RestCommand {
     GET_PANEL_LIST("rest/panels/"),
     GET_PANEL_LAYOUT("rest/panel/"),
     SEND_CONTROL_COMMAND("rest/control/"),
@@ -77,7 +91,8 @@ abstract class HttpConnector implements ControllerConnector {
     DISCOVERY(""),
     STOP_DISCOVERY(""),
     GET_DEVICE_LIST("rest/devices/"),
-    GET_DEVICE("rest/devices/");
+    GET_DEVICE("rest/devices/"),
+    GET_XML("controller.xml");    
 
     private String url;
 
@@ -87,8 +102,7 @@ abstract class HttpConnector implements ControllerConnector {
   }
 
   private boolean connectInProgress;
-  private boolean connected;
-  private boolean autoReconnect = true;
+  protected boolean connected;
   protected URL controllerUrl;
   protected Credentials credentials;
   private int timeout;
@@ -201,6 +215,14 @@ abstract class HttpConnector implements ControllerConnector {
               new ControllerCallback(RestCommand.GET_DEVICE, callback), timeout);
     }
   }
+  
+  @Override
+  public void getWidgetsCommandInfo(AsyncControllerCallback<List<Controller.WidgetCommandInfo>> callback) {
+    if (controllerUrl != null) {
+      doRequest(buildRequestUri(RestCommand.GET_XML), null, null,
+              new ControllerCallback(RestCommand.GET_XML, callback), timeout);
+    }
+  };
 
   @Override
   public void monitorSensors(String uuid, List<Integer> sensorIds,
@@ -321,7 +343,7 @@ abstract class HttpConnector implements ControllerConnector {
   // CALLBACK
   // ---------------------------------------------------------------------
 
-  class ControllerCallback {
+  public class ControllerCallback {
     RestCommand command;
     AsyncControllerCallback<?> callback;
     Object data;
@@ -336,12 +358,57 @@ abstract class HttpConnector implements ControllerConnector {
       this.callback = callback;
       this.data = data;
     }
+
+    public RestCommand getCommand() {
+      return command;
+    }
+
+    public AsyncControllerCallback<?> getWrappedCallback() {
+      return callback;
+    }
+
+    public Object getData() {
+      return data;
+    }
+
+    public void setData(Object data) {
+      this.data = data;
+    }
   };
 
   // ---------------------------------------------------------------------
   // HELPERS
   // ---------------------------------------------------------------------
 
+  private int getElementRefId(Element includeElement) {
+    return Integer.parseInt(includeElement.getAttribute("ref"));
+  }
+  
+  private List<Element> getChildElements(Node node, String name) {
+    List<Element> elements = new ArrayList<Element>();
+    for (int i=0; i<node.getChildNodes().getLength(); i++) {
+      Node childNode = node.getChildNodes().item(i);
+      if (childNode.getNodeType() == Node.ELEMENT_NODE && childNode.getNodeName().equalsIgnoreCase(name)) {
+        elements.add((Element)childNode);
+      }      
+    }
+    
+    return elements;
+  }
+  
+  private Element getFirstElement(Node node) {
+    NodeList nodes = node.getChildNodes();
+    if (nodes != null) {
+      for (int i=0; i< nodes.getLength(); i++) {
+        Node childNode = nodes.item(i);
+        if (childNode.getNodeType() == Node.ELEMENT_NODE) {
+          return (Element)childNode;
+        }
+      }
+    }
+    return null;
+  }
+  
   protected abstract void doRequest(URI uri, Map<String, String> headers, String content,
           final ControllerCallback callback, Integer timeout);
 
@@ -354,7 +421,7 @@ abstract class HttpConnector implements ControllerConnector {
     Object data = controllerCallback.data;
     String responseStr = null;
 
-    if (command != RestCommand.GET_RESOURCE_DATA) {
+    if (command != RestCommand.GET_RESOURCE_DATA && command != RestCommand.GET_XML) {
       try {
         responseStr = responseData != null ? new String(responseData, "UTF-8") : null;
       } catch (UnsupportedEncodingException e) {
@@ -363,6 +430,59 @@ abstract class HttpConnector implements ControllerConnector {
     }
 
     switch (command) {
+    case GET_XML:
+      if (responseCode != 200) {
+        processError(callback, responseStr);
+        return;
+      }
+      
+      List<Controller.WidgetCommandInfo> widgetCommands = new ArrayList<Controller.WidgetCommandInfo>();
+      DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+      
+      try {
+        DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+        Document doc = dBuilder.parse(new InputSource(new ByteArrayInputStream(responseData)));
+        NodeList components = doc.getElementsByTagName("components").item(0).getChildNodes();
+        for (int i=0; i<components.getLength(); i++) {
+          Node node = components.item(i);
+          if (node.getNodeType() != Node.ELEMENT_NODE) { 
+            continue;
+          }
+          
+          Element component = (Element)components.item(i);
+          String componentType = component.getNodeName();
+          NodeList childNodes = component.getChildNodes();
+          Controller.WidgetCommandInfo widgetInfo = null;
+          
+          if ("switch".equalsIgnoreCase(componentType)) {
+            widgetInfo = new Controller.WidgetCommandInfo(Boolean.class);
+            widgetInfo.setWidgetType("switch");            
+            widgetInfo.setCommandId1(getElementRefId(getFirstElement(component.getElementsByTagName("on").item(0))));
+            widgetInfo.setCommandId2(getElementRefId(getFirstElement(component.getElementsByTagName("off").item(0))));
+            widgetInfo.setSensorId(getElementRefId(getChildElements((Node)component, "include").get(0)));
+          } else if ("slider".equalsIgnoreCase(componentType)) {
+            widgetInfo = new Controller.WidgetCommandInfo(Integer.class);
+            widgetInfo.setWidgetType("slider");
+            widgetInfo.setCommandId1(getElementRefId(getFirstElement(component.getElementsByTagName("setValue").item(0))));
+            widgetInfo.setSensorId(getElementRefId(getChildElements((Node)component, "include").get(0)));
+          } else if ("button".equalsIgnoreCase(componentType)) {
+            widgetInfo = new Controller.WidgetCommandInfo(null);
+            widgetInfo.setWidgetType("button");
+            widgetInfo.setCommandId1(getElementRefId((Element)component.getElementsByTagName("include").item(0)));
+          }
+          
+          if (widgetInfo != null) {
+            widgetCommands.add(widgetInfo);
+          }
+        }
+      } catch (Exception e) {
+        processError(callback, "");
+        return;
+      }
+      
+      AsyncControllerCallback<List<Controller.WidgetCommandInfo>> getXml = (AsyncControllerCallback<List<Controller.WidgetCommandInfo>>) callback;
+      getXml.onSuccess(widgetCommands);      
+      break;
     case CONNECT: {
       if (responseCode != 200) {
         processError(callback, responseStr);

@@ -23,7 +23,9 @@ package org.openremote.console.controller.connector;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+
 import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
+import org.openremote.console.controller.Controller;
 import org.openremote.console.controller.ControllerConnectionStatus;
 import org.openremote.console.controller.auth.Credentials;
 import org.openremote.entities.panel.Panel;
@@ -258,6 +260,16 @@ public interface ControllerConnector extends CommandSender, ResourceLocator {
    * @param callback
    */
   void getDevice(String deviceName, AsyncControllerCallback<Device> callback);
+  
+//  /**
+//   * Returns {@link java.util.List} of {@link org.openremote.entities.controller.Device}
+//   * that match the supplied device names.
+//   * 
+//   * @param deviceNames
+//   * @param callback
+//   */
+//  void getDevices(List<String> deviceNames, AsyncControllerCallback<List<Device>> callback);
+  
   //
   // /**
   // * Sets whether the connector should automatically try to re-establish
@@ -274,4 +286,6 @@ public interface ControllerConnector extends CommandSender, ResourceLocator {
   // * @return
   // */
   // boolean isAutoReconnect();
+  
+  void getWidgetsCommandInfo(AsyncControllerCallback<List<Controller.WidgetCommandInfo>> callback);
 }
