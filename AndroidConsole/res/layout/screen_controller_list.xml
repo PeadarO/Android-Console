@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	    		  android:id="@+id/appSettingsView"
+	              android:layout_width="fill_parent"
+	              android:layout_height="wrap_content"
+            	  android:fillViewport="true"
+	              android:orientation="vertical"
+	              android:background="#000000">
+
+				<TextView
+				    android:id="@+id/textView1"
+				    android:layout_width="fill_parent"
+				    android:layout_height="fill_parent"
+				    android:gravity="center_vertical|center_horizontal"
+				    android:height="50dp"
+				    android:text="@string/title_controller_list"
+				    android:textAppearance="?android:attr/textAppearanceMedium"
+				    android:textSize="@dimen/titleFontSize" />
+		
+			
+			<!-- do we really want height to wrap content here? -->
+			<!-- customView -->
+
+				<RelativeLayout
+				    android:layout_width="match_parent"
+				    android:layout_height="wrap_content" >
+
+					<LinearLayout
+					    android:id="@+id/custom_servers_layout"
+					    android:layout_width="fill_parent"
+					    android:layout_height="fill_parent"
+					    android:layout_above="@+id/controller_list_bottom_layout"
+					    android:orientation="vertical"
+					    android:paddingBottom="0dp"
+					    android:paddingLeft="5dp"
+					    android:paddingRight="10dp"
+					    android:paddingTop="5dp"
+					    android:visibility="visible" >
+
+					    <ListView
+					        android:id="@+id/controller_list_view"
+					        android:layout_width="fill_parent"
+					        android:layout_height="fill_parent"
+					        android:cacheColorHint="#000000"
+					        android:choiceMode="singleChoice" >
+					    </ListView>
+
+					</LinearLayout>
+
+					<LinearLayout
+					    android:id="@+id/controller_list_bottom_layout"
+					    android:layout_width="match_parent"
+					    android:layout_height="wrap_content"
+					    android:layout_alignParentBottom="true"
+					    android:orientation="vertical" >
+
+					    <LinearLayout 
+							android:layout_width="fill_parent"
+							android:layout_height="wrap_content"
+							android:orientation="horizontal"
+							android:layout_gravity="bottom">
+							
+							<Button
+							    android:id="@+id/button_add_controller"
+							    android:layout_width="wrap_content"
+							    android:layout_height="wrap_content"
+							    android:layout_margin="3dp"
+							    android:layout_weight="1"
+							    android:text="@string/add"
+							    android:textSize="20dp"
+							    android:textStyle="normal" />
+							
+							<Button
+							    android:id="@+id/button_delete_controller"
+							    android:layout_width="wrap_content"
+							    android:layout_height="wrap_content"
+							    android:layout_margin="3dp"
+							    android:layout_weight="1"
+							    android:text="@string/delete"
+							    android:textSize="20dp"
+							    android:textStyle="normal" />
+
+						</LinearLayout>
+					    
+					    <TextView
+					        android:layout_width="fill_parent"
+					        android:layout_height="wrap_content"
+					        android:background="@color/dark_gray"
+					        android:paddingBottom="5dp"
+					        android:paddingLeft="10dp"
+					        android:paddingRight="0dp"
+					        android:paddingTop="5dp"
+					        android:text="@string/choose_panel_identity" />
+
+					    <org.openremote.android.console.view.PanelSelectSpinnerView
+					        android:layout_marginTop="5dp"
+					        android:id="@+id/panel_select_spinner_view"
+					        android:layout_width="fill_parent"
+					        android:layout_height="wrap_content" />
+
+					    <Button
+					        android:id="@+id/button_clear_image_cache"
+					        android:layout_width="wrap_content"
+					        android:layout_height="wrap_content"
+					        android:layout_gravity="center_horizontal"
+					        android:layout_marginBottom="10dp"
+					        android:layout_marginTop="10dp"
+					        android:paddingLeft="20dp"
+					        android:paddingRight="20dp"
+					        android:text="@string/clear_image_cache"
+					        android:textSize="20dp"
+					        android:textStyle="normal" />
+
+					</LinearLayout>
+
+				</RelativeLayout>
+</LinearLayout>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openremote xmlns="http://www.openremote.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openremote.org http://www.openremote.org/schemas/controller.xsd">
+	<screens>
+		<screen id="5" name="basement" >		  	
+			<grid left="20" top="20" width="300" height="400" rows="2" cols="2">
+				<cell x="0" y="0" rowspan="1" colspan="1">
+					<button id="59" name="A" repeat="false" hasControlCommand="false">
+						<default>
+							<image src="a.png" />
+						</default>
+						<pressed>
+							<image src="b.png" />
+						</pressed>
+					</button>
+				</cell>
+				<cell x="0" y="1" rowspan="1" >
+					<button id="60" name="B" repeat="false" hasControlCommand="true">
+						<default>
+							<image src="c.png" />
+						</default>
+						<pressed>
+							<image src="d.png" />
+						</pressed>
+					</button>
+				</cell>
+				<cell x="1" y="1" colspan="1">
+					<button id="61" name="C" repeat="false" hasControlCommand="false">
+						<default>
+							<image src="e.png" />
+						</default>
+						<pressed>
+							<image src="f.png" />
+						</pressed>
+					</button>
+				</cell>
+				<cell x="1" y="1" >
+					<button id="62" name="D" repeat="false" hasControlCommand="false">
+						<default>
+							<image src="g.png" />
+						</default>
+						<pressed>
+							<image src="h.png" />
+						</pressed>
+						<navigate toGroup="9" />
+					</button>
+				</cell>
+			</grid>
+		</screen>
+		<screen id="6" name="floor" >		  	
+			<grid left="20" top="20" width="300" height="400" rows="4" cols="4">
+				<cell x="0" y="1" rowspan="1" colspan="2">
+					<button id="63" name="E" repeat="false" hasControlCommand="false">
+						<default>
+							<image src="i.png" />
+						</default>
+						<pressed>
+							<image src="j.png" />
+						</pressed>
+						<navigate toGroup="9" toScreen="10"/>
+					</button>
+				</cell>
+				<cell x="0" y="1" rowspan="1" colspan="2">
+					<button id="64" name="F" repeat="false" hasControlCommand="false">      														
+						<navigate to="previousScreen"/>
+					</button>
+				</cell>
+				<cell x="0" y="1" rowspan="1" colspan="2">
+					<button id="65" name="G" repeat="false" hasControlCommand="false">         
+						<navigate to="nextScreen"/>
+					</button>
+				</cell>	
+				<cell x="0" y="1" rowspan="1" colspan="2">
+					<button id="66" name="H" repeat="false" hasControlCommand="false">         
+						<navigate to="setting"/>
+					</button>
+				</cell>
+				<cell x="0" y="1" rowspan="1" colspan="2">
+					<button id="67" name="I" repeat="false" hasControlCommand="false">          
+						<navigate to="back"/>
+					</button>
+				</cell>
+				<cell x="0" y="1" rowspan="1" colspan="2">
+					<button id="68" name="J" repeat="false" hasControlCommand="false">           
+						<navigate to="login"/>
+					</button>
+				</cell>
+				<cell x="0" y="1" rowspan="1" colspan="2">
+					<button id="69" name="K" repeat="false" hasControlCommand="false">          
+						<navigate to="logout"/>
+					</button>
+				</cell>
+			</grid>
+		</screen>
+	</screens>
+	<groups>
+		<group id="1" name="All rooms">
+			<include type="screen" ref="5" />
+		</group>
+		<group id="2" name="living room">
+			<include type="screen" ref="6" />
+		</group>
+	</groups>
+</openremote>

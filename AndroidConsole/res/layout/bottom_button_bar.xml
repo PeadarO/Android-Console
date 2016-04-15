@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+android:id="@+id/button_bar"
+android:layout_width="fill_parent"
+android:layout_height="wrap_content"
+android:orientation="horizontal"
+android:background="@color/dark_gray"
+android:layout_gravity="bottom">
+
+<Button android:id="@+id/setting_done"
+android:layout_width="wrap_content"
+android:layout_height="wrap_content"
+android:layout_weight="1"
+android:layout_margin="3px"
+android:text="@string/done"/>
+
+<Button android:id="@+id/setting_cancel"
+android:layout_width="wrap_content"
+android:layout_height="wrap_content"
+android:layout_weight="1"
+android:layout_margin="3px"
+android:text="@string/cancel"/>
+</LinearLayout>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+ <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+     android:layout_width="fill_parent"
+     android:layout_height="?android:attr/listPreferredItemHeight"
+     android:gravity="center"
+     android:minHeight="?android:attr/listPreferredItemHeight" >
+
+	<ImageView
+	    android:id="@+id/controller_edit"
+	    android:layout_width="40dp"
+	    android:layout_height="fill_parent"
+	    android:layout_alignParentRight="true"
+	    android:layout_centerVertical="true"
+	    android:layout_gravity="right|center_vertical"
+	    android:layout_marginLeft="25dp"
+	    android:layout_marginRight="10dp"
+	    android:clickable="true"
+	    android:src="@drawable/plus_icon" />
+ 
+    <TextView
+        android:id="@+id/controllerURL"
+        android:layout_width="wrap_content"
+        android:layout_height="?android:attr/listPreferredItemHeight"
+        android:layout_centerVertical="true"
+        android:editable="false"
+        android:gravity="left|center_vertical"
+        android:maxLines="1"
+        android:singleLine="true"
+        android:text="ADD CONTROLLER"
+        android:textColor="@color/white"
+        android:textSize="18sp" />
+
+</LinearLayout>

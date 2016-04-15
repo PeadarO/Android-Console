@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openremote xmlns="http://www.openremote.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openremote.org http://www.openremote.org/schemas/panel.xsd">
+  <panels>
+    <panel id="19" name="panel 1">
+      <include type="group" ref="20" />
+    </panel>
+  </panels>
+  <screens>
+	  <screen id="1" name="Starting Screen">
+      <background fillScreen="true">
+        <image src="P10300771270201601179.JPG" />
+      </background>
+      <absolute left="58" top="104" width="198" height="44">
+        <slider id="2" thumbImage="thumb.png" passive="true" vertical="false" />
+      </absolute>
+    </screen>
+    <screen id="21" name="Starting Screen" inverseScreenId="23">
+      <background fillScreen="true">
+        <image src="P10300771270201601179.JPG" />
+      </background>
+    </screen>
+    <screen id="23" name="Starting Screen" landscape="true" inverseScreenId="21">
+      <background fillScreen="true">
+        <image src="P10300771270203318091.JPG" />
+      </background>
+    </screen>
+  </screens>
+  <groups>
+    <group id="20" name="Default Group">
+      <tabbar>
+        <item name="setting">
+          <navigate to="setting" />
+          <image src="19gear1270207121935.png" />
+        </item>
+        <item name="logout">
+          <navigate to="logout" />
+          <image src="63runner1270207289463.png" />
+        </item>
+      </tabbar>
+			<include type="screen" ref="1" />
+      <include type="screen" ref="21" />
+      <include type="screen" ref="23" />
+    </group>
+  </groups>
+</openremote>
+

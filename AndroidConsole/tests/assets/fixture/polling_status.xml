@@ -1,0 +1,6 @@
+<openremote xsi:schemaLocation="http://www.openremote.org http://www.openremote.org/schemas/controller.xsd">
+    <status id="573">on</status>
+    <status id="574">off</status>
+    <status id="575">20</status>
+    <status id="576">60</status>
+</openremote>

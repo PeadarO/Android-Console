@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openremote xmlns="http://www.openremote.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openremote.org http://www.openremote.org/schemas/controller.xsd">
+	<screens>
+		<screen id="5" name="basement" >		 
+			<gesture id="11" type = "swipe-bottom-to-top" hasControlCommand="true">
+				<navigate toGroup="19" toScreen="19" />
+			</gesture>
+			<gesture id="12" type = "swipe-left-to-right" hasControlCommand="true">
+				<navigate toGroup="19" />
+			</gesture>	 
+			<gesture id="13" type = "swipe-top-to-bottom" hasControlCommand="true">
+				<navigate to="setting" />
+			</gesture>
+			<gesture id="14" type = "swipe-right-to-left" hasControlCommand="true"/>	
+			<absolute left="20" top="320" width="100" height="100" >
+				<slider id="59">
+					<min value="0" image="mute.png" trackImage="red.png"/>
+					<max value="100" image="loud.png" trackImage="green.png"/>
+					<link type="sensor" ref="59" />
+				</slider>
+			</absolute>
+			<absolute left="20" top="320" width="100" height="100" >
+				<slider id="60">
+					<min value="0" image="mute.png" trackImage="red.png"/>
+					<max value="100" image="loud.png" trackImage="green.png"/>
+					<link type="sensor" ref="60" />
+				</slider>
+			</absolute>
+		</screen>
+	  <screen id="6" name="floor" >		  	
+			<absolute left="20" top="320" width="100" height="100" >
+				<slider id="61">
+					<min value="0" image="mute.png" trackImage="red.png"/>
+					<max value="100" image="loud.png" trackImage="green.png"/>
+					<link type="sensor" ref="61" />
+				</slider>
+			</absolute>
+			<gesture id="15" type = "swipe-bottom-to-top" hasControlCommand="true">
+				<navigate toGroup="19" toScreen="19" />
+			</gesture>
+			<gesture id="16" type = "swipe-left-to-right" hasControlCommand="true">
+				<navigate toGroup="19" />
+			</gesture>	 
+			<gesture id="17" type = "swipe-top-to-bottom" hasControlCommand="true">
+				<navigate to="setting" />
+			</gesture>
+			<gesture id="18" type = "swipe-right-to-left" hasControlCommand="true"/>
+		</screen>
+	</screens>
+	<groups>
+	  <group id="1" name="All rooms">
+	    <include type="screen" ref="5" />
+	  </group>
+	  <group id="2" name="living room">
+	    <include type="screen" ref="6" />
+	  </group>
+	</groups>
+</openremote>

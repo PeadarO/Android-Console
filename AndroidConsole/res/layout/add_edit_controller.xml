@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scrollView1"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content" >
+    
+	<LinearLayout
+	    android:orientation="vertical"
+	    android:layout_width="match_parent"
+	    android:layout_height="wrap_content">
+	
+		<TextView
+		    android:id="@+id/addEditControllerTitle"
+		    android:layout_width="fill_parent"
+		    android:layout_height="wrap_content"
+		    android:gravity="center_vertical|center_horizontal"
+		    android:height="50dp"
+		    android:text="Controller"
+		    android:textAppearance="?android:attr/textAppearanceMedium"
+		    android:textSize="@dimen/titleFontSize" />
+		
+		<TextView android:text="@string/enter_device_url"
+		          android:textSize="18sp"
+		          android:layout_width="fill_parent"
+		          android:layout_height="wrap_content"
+		          android:textStyle="bold" />
+	
+		<EditText android:id="@+id/controller_url_edit_text"
+		          android:layout_width="fill_parent"
+		          android:layout_height="wrap_content" />
+		
+		<TextView android:text="@string/enter_default_panel"
+		          android:textSize="18sp"
+		          android:layout_width="fill_parent"
+		          android:layout_height="wrap_content"
+		          android:textStyle="bold" />
+	
+		<EditText android:id="@+id/controller_default_panel_edit_text"
+		          android:layout_width="fill_parent"
+		          android:layout_height="wrap_content" />
+	
+		<TextView android:text="@string/enter_username"
+		          android:textSize="18sp"
+		          android:layout_width="fill_parent"
+		          android:layout_height="wrap_content"
+		          android:textStyle="bold" />
+	
+		<EditText android:id="@+id/controller_username_edit_text"
+		          android:layout_width="fill_parent"
+		          android:layout_height="wrap_content" />
+	
+		<TextView
+		    android:layout_width="fill_parent"
+		    android:layout_height="wrap_content"
+		    android:text="@string/enter_password"
+		    android:textSize="18sp"
+		    android:textStyle="bold" />
+	
+		<EditText android:id="@+id/controller_password_edit_text"
+		    	  android:inputType="textPassword"
+		          android:layout_width="fill_parent"
+		          android:layout_height="wrap_content" />
+
+		<TextView
+		    android:id="@+id/textView1"
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="@string/x_scale"
+		    android:textSize="18sp"
+		    android:textStyle="bold" />
+
+		<EditText
+		    android:id="@+id/controller_x_scale"
+		    android:layout_width="fill_parent"
+		    android:layout_height="wrap_content"
+		    android:inputType="numberDecimal" />
+
+		<TextView
+		    android:id="@+id/textView2"
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="@string/y_scale"
+		    android:textSize="18sp"
+		    android:textStyle="bold" />
+
+		<EditText
+		    android:id="@+id/controller_y_scale"
+		    android:layout_width="fill_parent"
+		    android:layout_height="wrap_content"
+		    android:inputType="numberDecimal" />
+		
+		<LinearLayout 
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content" android:orientation="horizontal"
+			android:background="@color/dark_gray" android:layout_gravity="bottom">
+		
+			<Button android:id="@+id/edit_controller_save_button" android:text="@string/save"
+				android:layout_width="wrap_content" android:layout_height="wrap_content"
+				android:layout_weight="1" android:layout_margin="3px" />
+		
+			<Button android:id="@+id/edit_controller_cancel_button"
+				android:layout_width="wrap_content" android:layout_height="wrap_content"
+				android:layout_weight="1" android:layout_margin="3px" android:text="@string/cancel" />
+		</LinearLayout>
+	</LinearLayout>
+</ScrollView>

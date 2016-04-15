@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.openremote.android.console.test">
+
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+	<uses-permission android:name="android.permission.WAKE_LOCK"/>
+
+    <application>
+        <uses-library android:name="android.test.runner" />
+    </application>
+
+    <instrumentation android:name="android.test.InstrumentationTestRunner"
+                     android:targetPackage="org.openremote.android.console"
+                     android:label="Tests for android console."/>
+                     
+    <uses-sdk android:minSdkVersion="4" />
+</manifest>

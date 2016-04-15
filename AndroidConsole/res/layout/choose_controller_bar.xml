@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" 
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center_horizontal">
+    
+    <TableRow android:layout_width="fill_parent"
+      android:layout_height="wrap_content"
+      android:background="@color/dark_gray"
+      android:paddingLeft="10px">
+      <TextView android:text="Choose Controller:"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:paddingLeft="10px"
+      android:paddingTop="5px"
+      android:paddingBottom="5px"/>
+    <LinearLayout android:id="@+id/choose_controller_progress"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:visibility="invisible"
+	    android:paddingLeft="15px">
+      
+	    <ProgressBar android:id="@+android:id/progress"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content" />
+        
+     </LinearLayout>
+   </TableRow>
+   
+
+</LinearLayout>

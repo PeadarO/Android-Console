@@ -1,0 +1,23 @@
+Changes in OpenRemote Android 2.0 Beta 3
+========================================
+
+- Bug fix: illegal argument exception on SSL port out of range caused application crash (R3269) 
+- Bug fix: screen orientation change caused application crash (NPE) (R3273) 
+- Feature: Support multiple screen resolution and densities up to API 11 (Android 3.0)
+- Raise minimum SDK requirements to API 4 (Android 1.6)
+
+
+Changes in OpenRemote Android 2.0 Beta 2
+========================================
+
+- Fix bug where invalid controller URL caused an application crash (R3174)
+- Fix bug where missing/empty SSL port would cause an application crash (R3175)
+- Correct image clipping behavior (R3174 and R3175)
+- Usability improvement: if only one panel is present, select it automatically (R3183)
+- Bug fix: button labels match font sizes set in designer (R3194)
+- Bug fix: label placement more closely matches position set in designer (R3220)
+- Usability improvement: default demo controller URL included at http://controller.openremote.org/android/controller (R3223)
+- Bug fix: slow/broken connection on status polling would show up as an error message on panel (R3226)
+- Bug fix: navigation buttons were broken on API 3 and API 4 devices (R3227)
+
+

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OpenRemote</string>
+    <string name="app_version">2.3.0</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="quit">Quit</string>
+    <string name="back">Back</string>
+    <string name="configure">Configure</string>
+    <string name="config_file_at">Config file at </string>
+    <string name="has_an_error">has an error.</string>
+    <string name="error_connecting_to">Error connecting to server while fetching URL: </string>
+    <string name="activities">Activities</string>
+    <string name="enter_device_url">Controller URL (i.e. 192.168.1.1:8080/controller):</string>
+    <string name="enter_default_panel">Default Panel Name:</string>
+    <string name="enter_username">Username:</string>
+    <string name="enter_password">Password:</string>
+    <string name="x_scale">X Scale:</string>
+	<string name="y_scale">Y Scale:</string>
+    <string name="title_controller_list">Controller List</string>
+    <string name="title_panel_list">Select Panel</string>
+    <string name="save">Save</string>
+    <string name="settings">Settings</string>
+    <string name="text_auto">AutoDiscovery:</string>
+    <string name="button_auto">Toggle</string>
+    
+    <string name="add">Add</string>
+    <string name="delete">Delete</string>
+    <string name="done">Done</string>
+    <string name="cancel">Cancel</string>
+    <string name="clear_image_cache">Clear Image Cache</string>
+    <string name="choose_panel_identity">Choose Panel Identity:</string>
+    
+    <string name="login">Login</string>
+    <string name="logout">Logout</string>
+    <string name="setting">Setting</string>
+    <string name="username">Username:</string>
+    <string name="password">Password:</string>
+    <string name="ssl">SSL:</string>
+    <string name="ssl_port">Port:</string>
+    <string name="default_loading_text">Loading resources...</string>
+    <string name="incorrect_url_syntax_from_saved_configuration">Incorrect controller URL syntax from saved configuration</string>
+    <string name="incorrect_url_syntax">Incorrect controller URL syntax</string>
+    <string name="http_auth_failed">HTTP authentication failed</string>
+    <string name="web_element_missing_username_or_password">HTTP authorization required, but missing username or password from web element in panel.xml with id</string>
+    <string name="web_element_invalid_or_missing_src_url">invalid or missing URL in src attribute of web element in panel.xml with id</string>
+    <string name="controller_error">Controller error</string>
+    <string name="cannot_contact_controller_and_cannot_use_cache">Cannot contact controller and cannot use cache.</string>
+    <string name="error">Error</string>
+    <string name="panel_xml_parse_error">Parse error on panel.xml</string>
+</resources>
