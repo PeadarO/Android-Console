@@ -96,19 +96,15 @@ public class ConsoleTests {
   private static Controller controller;
   private PanelRegistrationHandle panelRegistration = null;
   private DeviceRegistrationHandle deviceRegistration = null;
-  private static Class<?> connectorClazz = SingleThreadHttpConnector.class;
   
-  public static void setConnectorClass(Class<?> connectorClass) {
-    connectorClazz = connectorClass;
-  }
    
   /**
    * Setup the controller and ensure we can connect to it
    */
   @BeforeClass
   public static void connectController() {
-    Controller.setConnectorType(connectorClazz);
-    controller = new Controller(CONTROLLER_URL);
+    Controller.Builder builder = new Controller.Builder(CONTROLLER_URL);
+    controller = builder.setConnector(new SingleThreadHttpConnector()).build();
 
     controller.connect(new AsyncControllerCallback<ControllerConnectionStatus>() {
       
