@@ -87,8 +87,9 @@ Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 		<echo message="--------------------------------------------------------------------" />
 		<echo message="" />
 		<jar destfile="${output.dir}/${jar.name}" basedir="${build.dir}" />
-	</target>
-  
+        <jar destfile="${output.dir}/${jar.sources.name}" basedir="${src.dir}" />
+    </target>
+
   <target name="javadoc" description="Create javadocs">
     <echo>${toString:project.doc.path}</echo>
     <javadoc packagenames="org.openremote.*"
