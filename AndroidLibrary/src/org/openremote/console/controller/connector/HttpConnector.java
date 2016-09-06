@@ -92,7 +92,7 @@ public abstract class HttpConnector implements ControllerConnector {
     STOP_DISCOVERY(""),
     GET_DEVICE_LIST("rest/devices/"),
     GET_DEVICE("rest/devices/"),
-    GET_XML("controller.xml");    
+    GET_XML("resources/controller.xml");
 
     private String url;
 

@@ -34,6 +34,7 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -60,9 +61,14 @@ public class SingleThreadHttpConnector extends HttpConnector {
   protected void doRequest(URI uri, Map<String, String> headers, String content,
           final ControllerCallback callback, Integer timeout) {
     boolean doHead = false;
+    boolean doGet = false;
 
     if (callback.command == RestCommand.GET_RESOURCE_DETAILS) {
       doHead = true;
+    }
+
+    if (callback.command == RestCommand.GET_XML) {
+      doGet = true;
     }
 
     HttpUriRequest http;
@@ -72,6 +78,16 @@ public class SingleThreadHttpConnector extends HttpConnector {
       httpHead.setConfig(RequestConfig.custom().setSocketTimeout(timeout)
               .setConnectionRequestTimeout(timeout).setConnectTimeout(timeout).build());
       http = httpHead;
+    } else if(doGet) {
+        HttpGet httpGet = new HttpGet(uri);
+        httpGet.setConfig(RequestConfig.custom().setSocketTimeout(timeout)
+            .setConnectionRequestTimeout(timeout).setConnectTimeout(timeout).build());
+        if (headers != null) {
+            for (Entry<String, String> header : headers.entrySet()) {
+                httpGet.addHeader(header.getKey(), header.getValue());
+            }
+        }
+        http = httpGet;
     } else {
       HttpPost httpPost = new HttpPost(uri);
       httpPost.addHeader("Accept", "application/json");
@@ -120,9 +136,13 @@ public class SingleThreadHttpConnector extends HttpConnector {
       }
     } catch (Exception e) {
       if (callback.command == RestCommand.DO_SENSOR_POLLING && e instanceof SocketTimeoutException) {
-        callback.callback.onSuccess(null);
+          if (callback.callback != null) {
+              callback.callback.onSuccess(null);
+          }
       } else {
-        callback.callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
+          if (callback.callback != null) {
+              callback.callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
+          }
       }
       return;
     }
