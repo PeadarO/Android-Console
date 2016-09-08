@@ -588,6 +588,15 @@ public abstract class HttpConnector implements ControllerConnector {
               ControllerResponseCode.OK));
       break;
     }
+    case SEND_NAMED_COMMAND: {
+        if (responseCode != 204) {
+            processError(callback, responseStr);
+            return;
+        }
+        AsyncControllerCallback<CommandResponse> commandCallBack = (AsyncControllerCallback<CommandResponse>) callback;
+        commandCallBack.onSuccess(new CommandResponse(ControllerResponseCode.NO_CONTENT));
+        break;
+    }
     case GET_RESOURCE_DATA: {
       if (responseCode != 200) {
         try {
