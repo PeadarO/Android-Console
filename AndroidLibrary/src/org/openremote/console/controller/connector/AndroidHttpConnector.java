@@ -20,28 +20,26 @@
  */
 package org.openremote.console.controller.connector;
 
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.Future;
-
+import com.loopj.android.http.AsyncHttpResponseHandler;
+import com.loopj.android.http.RequestParams;
+import com.loopj.android.http.ResponseHandlerInterface;
 import org.apache.http.Header;
 import org.apache.http.conn.ConnectTimeoutException;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
-import org.apache.http.protocol.HTTP;
 import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.console.controller.ControllerConnectionStatus;
 import org.openremote.console.controller.auth.Credentials;
 import org.openremote.entities.controller.AsyncControllerCallback;
 import org.openremote.entities.controller.ControllerResponseCode;
 
-import com.loopj.android.http.AsyncHttpResponseHandler;
-import com.loopj.android.http.ResponseHandlerInterface;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Android specific connector capable of calling callback on the UI thread via
@@ -75,40 +73,39 @@ public class AndroidHttpConnector extends HttpConnector {
   protected void doRequest(URI uri, Map<String, String> headers, String content,
           final ControllerCallback callback, Integer timeout) {
     if (callback.command == RestCommand.DISCOVERY) {
-      ResponseHandlerInterface handler = new AsyncHttpResponseHandler() {
-        @Override
-        public void onStart() {
-          // Called when discovery is started
-          AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback) callback.callback;
-
-          discoveryCallback.onDiscoveryStarted();
-        }
-
-        @Override
-        public void onFinish() {
-          // This will be called when discovery is stopped
-          AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback) callback.callback;
-
-          discoveryCallback.onDiscoveryStopped();
-        }
-
-        @Override
-        public void onSuccess(int code, Header[] headers, byte[] response) {
-          // Called each time a controller is discovered
-          handleResponse(callback, code, headers, response);
-        }
-
-        @Override
-        public void onFailure(int arg0, Header[] arg1, byte[] arg2, Throwable arg3) {
-          // Called when discovery cannot be started
-          AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback) callback.callback;
-
-          discoveryCallback.onStartDiscoveryFailed(ControllerResponseCode.UNKNOWN_ERROR);
-        }
-      };
-
       int tcpPort = (Integer) callback.data;
-      client.startDiscovery(tcpPort, timeout, handler);
+      client.startDiscovery(
+          tcpPort,
+          timeout,
+          new ControllerDiscoveryResponseHandler() {
+              @Override
+              public void sendStartMessage() {
+                  // Called when discovery is started
+                  AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback) callback.callback;
+                  discoveryCallback.onDiscoveryStarted();
+              }
+
+              @Override
+              public void sendFinishMessage() {
+                  // This will be called when discovery is stopped
+                  AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback) callback.callback;
+                  discoveryCallback.onDiscoveryStopped();
+              }
+
+              @Override
+              public void sendSuccessMessage(byte[] responseBody) {
+                  // Called each time a controller is discovered
+                  handleResponse(callback, 0, null, responseBody);
+              }
+
+              @Override
+              public void sendFailureMessage(Exception ex) {
+                  // Called when discovery cannot be started
+                  AsyncControllerDiscoveryCallback discoveryCallback = (AsyncControllerDiscoveryCallback) callback.callback;
+                  discoveryCallback.onStartDiscoveryFailed(ControllerResponseCode.UNKNOWN_ERROR);
+              }
+          }
+      );
       return;
     }
 
@@ -123,12 +120,17 @@ public class AndroidHttpConnector extends HttpConnector {
     }
 
     boolean doHead = false;
+    boolean doGet = false;
 
     if (callback.command == RestCommand.GET_RESOURCE_DETAILS) {
       doHead = true;
     }
 
-    ResponseHandlerInterface handler = new AsyncHttpResponseHandler() {
+    if (callback.command == RestCommand.GET_XML) {
+      doGet = true;
+    }
+
+      ResponseHandlerInterface handler = new AsyncHttpResponseHandler() {
 
       @Override
       public void onCancel() {
@@ -146,7 +148,12 @@ public class AndroidHttpConnector extends HttpConnector {
           connectCallback = (AsyncControllerCallback<ControllerConnectionStatus>) callback.callback;
         }
 
-        handleResponse(callback, code, headers, response);
+        Map<String,String> headerMap = new HashMap<String, String>();
+        for (Header header : headers) {
+            headerMap.put(header.getName(), header.getValue());
+        }
+
+        handleResponse(callback, code, headerMap, response);
       }
 
       @Override
@@ -167,33 +174,17 @@ public class AndroidHttpConnector extends HttpConnector {
       } catch (MalformedURLException e) {
         callback.callback.onFailure(ControllerResponseCode.INVALID_URL);
       }
-    } else {
-      StringEntity entity = null;
-      Header[] headerArr = null;
-
-      if (headers != null) {
-        List<Header> headerList = new ArrayList<Header>();
-
-        for (Entry<String, String> entry : headers.entrySet()) {
-          headerList.add(new BasicHeader(entry.getKey(), entry.getValue()));
-        }
-
-        headerArr = headerList.toArray(new Header[0]);
-      }
-
-      if (content != null) {
+    } else if (doGet) {
+        client.setTimeout(timeout);
         try {
-          entity = new StringEntity(content);
-          entity.setContentType(new BasicHeader(HTTP.CONTENT_TYPE, "application/json"));
-        } catch (UnsupportedEncodingException e) {
-          callback.callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
-          return;
+            client.get(null, uri.toURL().toString(), prepareHeaders(headers), new RequestParams(), handler);
+        } catch (MalformedURLException e) {
+            callback.callback.onFailure(ControllerResponseCode.INVALID_URL);
         }
-      }
-
+    } else {
       client.setTimeout(timeout);
       try {
-        client.post(null, uri.toURL().toString(), headerArr, entity, "application/json", handler);
+        client.post(null, uri.toURL().toString(), prepareHeaders(headers), prepareEntity(content), "application/json", handler);
       } catch (MalformedURLException e) {
         callback.callback.onFailure(ControllerResponseCode.INVALID_URL);
       }
@@ -227,4 +218,23 @@ public class AndroidHttpConnector extends HttpConnector {
   public boolean isDiscoveryRunning() {
     return client.isDiscoveryRunning();
   }
+
+    protected Header[] prepareHeaders(Map<String, String> headers) {
+        Header[] headerArr = null;
+        if (headers != null) {
+            List<Header> headerList = new ArrayList<Header>();
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                headerList.add(new BasicHeader(entry.getKey(), entry.getValue()));
+            }
+            headerArr = headerList.toArray(new Header[headerList.size()]);
+        }
+        return headerArr;
+    }
+
+    protected StringEntity prepareEntity(String content) {
+        return content != null
+            ? new StringEntity(content, ContentType.APPLICATION_JSON)
+            : null;
+    }
+
 }

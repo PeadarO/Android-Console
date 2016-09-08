@@ -25,9 +25,11 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -147,8 +149,12 @@ public class SingleThreadHttpConnector extends HttpConnector {
       return;
     }
 
-    handleResponse(callback, response.getStatusLine().getStatusCode(), response.getAllHeaders(),
-            responseData);
+    Header[] responseHeaders = response.getAllHeaders();
+    Map<String,String> responseHeaderMap = new HashMap<String, String>();
+    for (Header header : responseHeaders) {
+        responseHeaderMap.put(header.getName(), header.getValue());
+    }
+    handleResponse(callback, response.getStatusLine().getStatusCode(), responseHeaderMap, responseData);
   }
 
   @Override

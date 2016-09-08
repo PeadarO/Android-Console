@@ -466,8 +466,6 @@ public class Controller {
    * Set the Controller Info; will cause a disconnect and re-connect if
    * controller is already connected. Previous connection callback will be
    * called on connection complete
-   * 
-   * @param url
    */
   protected void setControllerInfo(ControllerInfo controllerInfo) {
     if (!isConnected()) {

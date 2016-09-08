@@ -24,16 +24,15 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
-import com.loopj.android.http.ResponseHandlerInterface;
-
 /**
  * This class is the main manager of the discovery process.
  * 
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  * 
  */
-class ControllerDiscoveryServer extends Thread {
-  private final ResponseHandlerInterface responseHandler;
+public class ControllerDiscoveryServer extends Thread {
+
+  private final ControllerDiscoveryResponseHandler responseHandler;
   private static final String MULTICAST_ADDRESS = "224.0.1.100";
   private static final int MULTICAST_PORT = 3333;
   private boolean cancelled;
@@ -43,7 +42,7 @@ class ControllerDiscoveryServer extends Thread {
   private int pauseTime = 1000;
   private ControllerDiscoveryReceiver receiver;
 
-  ControllerDiscoveryServer(int tcpPort, Integer duration, ResponseHandlerInterface responseHandler) {
+  public ControllerDiscoveryServer(int tcpPort, Integer duration, ControllerDiscoveryResponseHandler responseHandler) {
     this.tcpPort = tcpPort;
     this.duration = duration;
     this.responseHandler = responseHandler;
@@ -99,7 +98,7 @@ class ControllerDiscoveryServer extends Thread {
 
     } catch (IOException e) {
       // Notify start failure
-      responseHandler.sendFailureMessage(0, null, null, e);
+      responseHandler.sendFailureMessage(e);
       return;
     } finally {
       if (receiver != null) {
@@ -109,7 +108,7 @@ class ControllerDiscoveryServer extends Thread {
     }
   }
 
-  void cancel() {
+  public void cancel() {
     cancelled = true;
     this.interrupt();
   }

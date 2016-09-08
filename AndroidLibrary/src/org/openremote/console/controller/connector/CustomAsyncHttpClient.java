@@ -21,7 +21,6 @@ package org.openremote.console.controller.connector;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.ResponseHandlerInterface;
@@ -53,14 +52,9 @@ class CustomAsyncHttpClient extends AsyncHttpClient {
 
   /**
    * Starts controller discovery
-   * 
-   * @param tcpPort
-   * @param discoveryDuration
-   * @param responseHandler
-   * @return
    */
   public void startDiscovery(int tcpPort, Integer discoveryDuration,
-          ResponseHandlerInterface responseHandler) {
+                             final ControllerDiscoveryResponseHandler responseHandler) {
     if (discoveryServer != null)
       return;
 
@@ -70,9 +64,6 @@ class CustomAsyncHttpClient extends AsyncHttpClient {
 
   /**
    * Force stop controller discovery if it is running
-   * 
-   * @param responseHandler
-   * @return
    */
   public void stopDiscovery() {
     if (discoveryServer != null) {

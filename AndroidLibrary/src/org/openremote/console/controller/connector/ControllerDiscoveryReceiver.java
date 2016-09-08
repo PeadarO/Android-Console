@@ -19,13 +19,14 @@
  */
 package org.openremote.console.controller.connector;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.loopj.android.http.ResponseHandlerInterface;
 
 /**
  * Controller auto discovery; this is a TCP server receiving responses from
@@ -34,13 +35,13 @@ import com.loopj.android.http.ResponseHandlerInterface;
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  * 
  */
-class ControllerDiscoveryReceiver extends Thread {
-  private final ResponseHandlerInterface responseHandler;
+public class ControllerDiscoveryReceiver extends Thread {
+  private final ControllerDiscoveryResponseHandler responseHandler;
   private ServerSocket serverSocket;
   private boolean cancelled;
   private List<String> responses = new ArrayList<String>();
 
-  public ControllerDiscoveryReceiver(ResponseHandlerInterface responseHandler, int tcpPort)
+  public ControllerDiscoveryReceiver(ControllerDiscoveryResponseHandler responseHandler, int tcpPort)
           throws IOException {
     this.responseHandler = responseHandler;
     serverSocket = new ServerSocket(tcpPort);
@@ -51,13 +52,30 @@ class ControllerDiscoveryReceiver extends Thread {
     // Start TCP server and wait for incoming connections
     try {
       while (!cancelled) {
-        new ControllerDiscoveryResponseHandler(this, serverSocket.accept()).start();
+          final Socket socket = serverSocket.accept();
+          new Thread() {
+              @Override
+              public void run() {
+                  try {
+                      BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                      String inputLine;
+                      String response = "";
+                      while ((inputLine = in.readLine()) != null) {
+                          response += inputLine;
+                      }
+                      socket.close();
+                      processResponse(response);
+                  } catch (IOException e) {
+                      e.printStackTrace();
+                  }
+              }
+          }.start();
       }
     } catch (Exception e) {
     }
   }
 
-  void cancel() {
+  public void cancel() {
     cancelled = true;
     if (serverSocket != null) {
       try {
@@ -70,12 +88,12 @@ class ControllerDiscoveryReceiver extends Thread {
     this.interrupt();
   }
 
-  synchronized void processResponse(String response) {
+  synchronized protected void processResponse(String response) {
     // Check response isn't empty or hasn't already been received
     if (!response.isEmpty() && !responses.contains(response)) {
       responses.add(response);
       try {
-        responseHandler.sendSuccessMessage(200, null, response.getBytes("UTF-8"));
+        responseHandler.sendSuccessMessage(response.getBytes("UTF-8"));
       } catch (UnsupportedEncodingException e) {
         // TODO Auto-generated catch block
         e.printStackTrace();

@@ -21,7 +21,6 @@
 package org.openremote.console.controller.connector;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URL;
@@ -32,11 +31,12 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.http.Header;
 import org.openremote.console.controller.AsyncControllerDiscoveryCallback;
 import org.openremote.console.controller.Controller;
 import org.openremote.console.controller.ControllerConnectionStatus;
@@ -64,17 +64,19 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 /**
  * Base class for HTTP connector implementations. This uses the HTTP REST API
  * which is obviously connectionless so we mimic a connection using a heartbeat
  * timer to poll the panel list REST API
- * 
+ *
  * @author <a href="mailto:richard@openremote.org">Richard Turner</a>
  */
 public abstract class HttpConnector implements ControllerConnector {
-  public enum RestCommand {
+
+    private static final Logger LOG = Logger.getLogger(HttpConnector.class.getName());
+
+    public enum RestCommand {
     GET_PANEL_LIST("rest/panels/"),
     GET_PANEL_LAYOUT("rest/panel/"),
     SEND_CONTROL_COMMAND("rest/control/"),
@@ -215,7 +217,7 @@ public abstract class HttpConnector implements ControllerConnector {
               new ControllerCallback(RestCommand.GET_DEVICE, callback), timeout);
     }
   }
-  
+
   @Override
   public void getWidgetsCommandInfo(AsyncControllerCallback<List<Controller.WidgetCommandInfo>> callback) {
     if (controllerUrl != null) {
@@ -234,8 +236,15 @@ public abstract class HttpConnector implements ControllerConnector {
                       new String[] {
                           uuid,
                           Arrays.toString(sensorIds.toArray()).replace(", ", ",").replace("]", "")
-                                  .replace("[", "") }, RestCommand.DO_SENSOR_POLLING), null, null,
-              new ControllerCallback(RestCommand.DO_SENSOR_POLLING, callback), 55000);
+                                  .replace("[", "")
+                      },
+                      RestCommand.DO_SENSOR_POLLING
+              ),
+              null,
+              null,
+              new ControllerCallback(RestCommand.DO_SENSOR_POLLING, callback),
+              55000
+      );
     }
   }
 
@@ -343,16 +352,16 @@ public abstract class HttpConnector implements ControllerConnector {
   // CALLBACK
   // ---------------------------------------------------------------------
 
-  public class ControllerCallback {
+  static public class ControllerCallback {
     RestCommand command;
     AsyncControllerCallback<?> callback;
     Object data;
 
-    protected ControllerCallback(RestCommand command, AsyncControllerCallback<?> callback) {
+    public ControllerCallback(RestCommand command, AsyncControllerCallback<?> callback) {
       this(command, callback, null);
     }
 
-    protected ControllerCallback(RestCommand command, AsyncControllerCallback<?> callback,
+      public ControllerCallback(RestCommand command, AsyncControllerCallback<?> callback,
             Object data) {
       this.command = command;
       this.callback = callback;
@@ -383,19 +392,19 @@ public abstract class HttpConnector implements ControllerConnector {
   private int getElementRefId(Element includeElement) {
     return Integer.parseInt(includeElement.getAttribute("ref"));
   }
-  
+
   private List<Element> getChildElements(Node node, String name) {
     List<Element> elements = new ArrayList<Element>();
     for (int i=0; i<node.getChildNodes().getLength(); i++) {
       Node childNode = node.getChildNodes().item(i);
       if (childNode.getNodeType() == Node.ELEMENT_NODE && childNode.getNodeName().equalsIgnoreCase(name)) {
         elements.add((Element)childNode);
-      }      
+      }
     }
-    
+
     return elements;
   }
-  
+
   private Element getFirstElement(Node node) {
     NodeList nodes = node.getChildNodes();
     if (nodes != null) {
@@ -408,14 +417,14 @@ public abstract class HttpConnector implements ControllerConnector {
     }
     return null;
   }
-  
+
   protected abstract void doRequest(URI uri, Map<String, String> headers, String content,
           final ControllerCallback callback, Integer timeout);
 
   // TODO: Provide better handling of failures
   @SuppressWarnings("unchecked")
   protected void handleResponse(ControllerCallback controllerCallback, int responseCode,
-          Header[] headers, byte[] responseData) {
+                                Map<String, String> headers, byte[] responseData) {
     RestCommand command = controllerCallback.command;
     AsyncControllerCallback<?> callback = controllerCallback.callback;
     Object data = controllerCallback.data;
@@ -435,28 +444,28 @@ public abstract class HttpConnector implements ControllerConnector {
         processError(callback, responseStr);
         return;
       }
-      
+
       List<Controller.WidgetCommandInfo> widgetCommands = new ArrayList<Controller.WidgetCommandInfo>();
       DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-      
+
       try {
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
         Document doc = dBuilder.parse(new InputSource(new ByteArrayInputStream(responseData)));
         NodeList components = doc.getElementsByTagName("components").item(0).getChildNodes();
         for (int i=0; i<components.getLength(); i++) {
           Node node = components.item(i);
-          if (node.getNodeType() != Node.ELEMENT_NODE) { 
+          if (node.getNodeType() != Node.ELEMENT_NODE) {
             continue;
           }
-          
+
           Element component = (Element)components.item(i);
           String componentType = component.getNodeName();
           NodeList childNodes = component.getChildNodes();
           Controller.WidgetCommandInfo widgetInfo = null;
-          
+
           if ("switch".equalsIgnoreCase(componentType)) {
             widgetInfo = new Controller.WidgetCommandInfo(Boolean.class);
-            widgetInfo.setWidgetType("switch");            
+            widgetInfo.setWidgetType("switch");
             widgetInfo.setCommandId1(getElementRefId(getFirstElement(component.getElementsByTagName("on").item(0))));
             widgetInfo.setCommandId2(getElementRefId(getFirstElement(component.getElementsByTagName("off").item(0))));
             widgetInfo.setSensorId(getElementRefId(getChildElements((Node)component, "include").get(0)));
@@ -470,7 +479,7 @@ public abstract class HttpConnector implements ControllerConnector {
             widgetInfo.setWidgetType("button");
             widgetInfo.setCommandId1(getElementRefId((Element)component.getElementsByTagName("include").item(0)));
           }
-          
+
           if (widgetInfo != null) {
             widgetCommands.add(widgetInfo);
           }
@@ -479,9 +488,9 @@ public abstract class HttpConnector implements ControllerConnector {
         processError(callback, "");
         return;
       }
-      
+
       AsyncControllerCallback<List<Controller.WidgetCommandInfo>> getXml = (AsyncControllerCallback<List<Controller.WidgetCommandInfo>>) callback;
-      getXml.onSuccess(widgetCommands);      
+      getXml.onSuccess(widgetCommands);
       break;
     case CONNECT: {
       if (responseCode != 200) {
@@ -668,10 +677,10 @@ public abstract class HttpConnector implements ControllerConnector {
       Date modifiedTime = null;
 
       // Look at headers
-      for (Header header : headers) {
-        if (header.getName().equalsIgnoreCase("content-type")) {
+      for (Map.Entry<String, String> header : headers.entrySet()) {
+        if (header.getKey().equalsIgnoreCase("content-type")) {
           contentType = header.getValue();
-        } else if (header.getName().equalsIgnoreCase("last-modified")) {
+        } else if (header.getKey().equalsIgnoreCase("last-modified")) {
           try {
             modifiedTime = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz").parse(header
                     .getValue());
@@ -715,6 +724,7 @@ public abstract class HttpConnector implements ControllerConnector {
         callback.onFailure(error.getResponse());
       }
     } catch (Exception ex) {
+      LOG.log(Level.INFO, "Unknown response processing error", ex);
       callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
     }
   }

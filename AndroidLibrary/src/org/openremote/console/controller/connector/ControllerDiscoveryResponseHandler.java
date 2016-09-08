@@ -19,39 +19,12 @@
  */
 package org.openremote.console.controller.connector;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.Socket;
+public interface ControllerDiscoveryResponseHandler {
+    void sendStartMessage();
 
-/**
- * Controller auto discovery response handler
- * 
- * @authors Rich Turner
- * 
- */
-class ControllerDiscoveryResponseHandler extends Thread {
-  private Socket socket = null;
-  private ControllerDiscoveryReceiver receiver;
+    void sendFinishMessage();
 
-  public ControllerDiscoveryResponseHandler(ControllerDiscoveryReceiver receiver, Socket socket) {
-    this.socket = socket;
-    this.receiver = receiver;
-  }
+    void sendSuccessMessage(byte[] responseBody);
 
-  @Override
-  public void run() {
-    try {
-      BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-      String inputLine;
-      String response = "";
-      while ((inputLine = in.readLine()) != null) {
-        response += inputLine;
-      }
-      socket.close();
-      receiver.processResponse(response);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
+    void sendFailureMessage(Exception ex);
 }
