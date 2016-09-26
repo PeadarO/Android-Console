@@ -441,7 +441,8 @@ public abstract class HttpConnector implements ControllerConnector {
     switch (command) {
     case GET_XML:
       if (responseCode != 200) {
-        processError(callback, responseStr);
+        LOG.log(Level.INFO, "Unsuccessful response: " + responseCode);
+        callback.onFailure(ControllerResponseCode.UNKNOWN_ERROR);
         return;
       }
 
@@ -485,7 +486,8 @@ public abstract class HttpConnector implements ControllerConnector {
           }
         }
       } catch (Exception e) {
-        processError(callback, "");
+        LOG.log(Level.INFO, "XML processing error", e);
+        callback.onFailure(ControllerResponseCode.CONTROLLER_XML_INVALID);
         return;
       }
 
