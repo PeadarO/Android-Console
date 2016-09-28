@@ -1,3 +1,4 @@
+OpenRemote, the Open Source middleware for IoT
 Copyright 2015, OpenRemote Inc.
 
 See the CONTRIBUTORS.txt file in the distribution for a
