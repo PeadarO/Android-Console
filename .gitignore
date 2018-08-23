@@ -1,4 +1,8 @@
 /AndroidLibraryDemo/bin
+build
 output
 bin
-/AndroidLibrary/docs
+.gradle
+.idea
+/AndroidConsole/gen
+/AndroidLibrary/doc
